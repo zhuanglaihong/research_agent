@@ -13,37 +13,31 @@
   <a href="#demo">在线演示</a>
 </p>
 
-> **当前阶段：简历版 Agent MVP。** 下载后无需注册登录；默认 H2、arXiv、PDF 文本处理和本地分块 BM25 检索，默认不需要 MySQL、Redis、Docker、Python 或 GPU。启动需要 JDK 21；Web 界面还需 Node.js 22。`demo` 模式使用固定样例；`live` 模式支持 Ollama 本地模型和 OpenAI 兼容 API，后者需要 API Key。LangChain4j 任务工具包含文献/笔记检索、项目文件、论文列表和实验结果观察；另提供绑定项目的只读 MCP Streamable HTTP 工具。具体边界及限制见下表。Python Runner 默认关闭，需人工确认，限短时运行。未经认证的服务只允许本机使用。
+> **科研项目、代码与实验，集中在一个工作区。** 无需注册登录，下载后即可在本机启动。支持 Ollama 本地模型与 OpenAI 兼容 API；以自然语言下达任务，审阅代码、批准运行并查看结果。默认 H2 文件存储，无需单独配置数据库。
 
 ## 📑 导航
 
-1. [定位、已实现功能和体验流程](#features)
+1. [定位、主要功能和体验流程](#features)
 2. [快速开始与模型配置](#quickstart)
-3. [实际技术栈与运行架构](#stack)
+3. [技术栈与运行架构](#stack)
 4. [Windows、macOS、Linux 环境配置](#platforms)
-5. [在线演示、验证与后续计划](#demo)
+5. [在线演示与常见问题](#demo)
 
 ---
 
 <a id="features"></a>
 
-## 💡 定位与已实现功能
+## 💡 定位与主要功能
 
 `research_agent` 面向个人科研工作：管理本地项目、描述代码需求、审阅任务步骤，再由 Agent 读取项目文件并生成独立的代码产物。模型负责推理与生成；项目负责把工作区、后台任务、过程记录和成果放在一起。
 
-| 能力 | 现在能做什么 | 边界 |
-| --- | --- | --- |
-| 本地项目 | 创建项目、选择主要语言、查看项目目录 | 默认在 `data/workspaces/1/` 中建目录；显式路径也必须在该目录内 |
-| 自然语言任务 | 输入需求、审阅固定步骤、批准或取消 | 步骤仍是模板，不是模型自主制定研究计划 |
-| 科研编程 Agent | LangChain4j 工具调用：读取项目文件、检索资料、观察已有实验结果、生成隔离的代码产物；H2 保存有限任务消息窗口 | 不会自动改写原仓库；工具循环的完整计划/反思图仍有限 |
-| 任务与进度 | 后台队列、状态事件、断线后查看历史、总结 | 单后端实例；重启时运行中的任务标为中断 |
-| 项目记忆 | 在工作区保存和编辑 `.research_agent/memory.md`，任务生成时读取 | 用户自行维护，不会自动概括全部历史 |
-| 科研知识库 RAG | 保存笔记、arXiv 摘要和 PDF 文本；项目内分块 BM25 检索，显示来源与片段编号，可删除资料 | 本地关键词相关性，不是向量语义检索 |
-| 每日论文 | 设置英文研究主题，手动或每天 08:00 从 arXiv 拉取最新元数据与原始摘要，去重并加入项目检索 | 不下载 PDF；尚未自动提炼创新点或评价论文质量 |
-| 论文到代码入口 | 上传文本型 PDF，抽取并审阅方法原文片段，创建带来源、语言与复现交付要求的待确认任务；arXiv 摘要也可草拟任务 | 演示模式只生成固定样例；真实论文复现需模型、人工核对与实验验证 |
-| 实验助手 | 可选开启 Python Runner；人工确认后运行脚本，查看状态、日志、数值指标和 SVG 曲线；Agent 可读取已完成运行结果并草拟后续任务 | 默认关闭；5 分钟/1 MB 日志限制；无系统沙箱，不会自主改参或重启实验 |
-| MCP | `/api/mcp/projects/{projectId}` 暴露只读笔记、论文和实验查询工具 | 无认证，仅限回环本机；不提供执行或文件写工具 |
-| 成果 | 浏览生成文件、下载 ZIP | 每项任务使用独立产物目录 |
+| 功能 | 用户可以做什么 |
+| --- | --- |
+| 项目与任务 | 创建科研项目，用自然语言提交任务，审阅、批准或取消任务 |
+| 科研编程 | Agent 读取项目上下文，通过工具调用生成独立代码产物，在线查看并下载 |
+| 资料与记忆 | 保存项目记忆、导入 PDF、订阅 arXiv，使用带来源的 BM25 检索获取相关片段 |
+| 实验与结果 | 批准 Python 脚本运行，查看状态、日志、指标和 SVG 曲线，创建后续分析任务 |
+| MCP 接口 | 让兼容的本机 MCP 客户端查询项目笔记、论文列表和实验结果 |
 
 **当前不需要账号。** 本机用户打开界面即可使用。数据保存在本机文件；`user_id=1` 是兼容旧数据库结构的内部值，不表示有用户系统。服务只应监听本机，不能把无认证的工作区接口直接暴露到公网。
 
@@ -69,11 +63,11 @@
 
 2026-10-06 已完成 [Ollama 实验反馈闭环](examples/ollama-feedback-case/README.md)：真实模型生成标准库梯度下降脚本，人工批准后由 Java Runner 执行，Agent 调用实验观察工具读取实际指标并生成分析和下一步任务草稿。保存了脚本、指标、报告和工具事件；这是小型集成验证，不代表论文复现成功。
 
-2026-10-06 已通过真实模型的小型生成与执行验证：标准库回归任务由模型生成，Java Runner 执行成功，loss 从 133 降至 0.0725；详见 [真实模型验证记录](docs/live-validation.md)。这验证了基础链路，尚未证明论文复现质量。
+2026-10-06 已通过真实模型的小型生成与执行验证：标准库回归任务由模型生成，Java Runner 执行成功，loss 从 133 降至 0.0725；详见 [真实模型验证记录](docs/live-validation.md)。该案例展示模型生成、Java 执行和指标记录。
 
-[Digits 分类基线](examples/digits-baseline/README.md) 可在 CPU 上实际训练，不需要模型密钥。三随机种子、固定训练/验证/测试划分、验证损失早停，输出 JSONL 指标、统计结果、SVG 曲线与混淆矩阵。当前实测测试准确率均值 96.39%，同一数据划分上样本标准差为 0；仅代表这个基线与划分。脚本人工编写，未验证 LLM 自动生成能力。在线 Demo 展示实测结果快照，运行环境和脚本 SHA256 可核对。Java Runner 真实运行该案例的烟测已通过。
+[Digits 分类基线](examples/digits-baseline/README.md) 可在 CPU 上实际训练，不需要模型密钥。三随机种子、固定训练/验证/测试划分、验证损失早停，输出 JSONL 指标、统计结果、SVG 曲线与混淆矩阵。当前实测测试准确率均值 96.39%，同一数据划分上样本标准差为 0；仅代表这个基线与划分。脚本人工编写。在线 Demo 展示实测结果快照，运行环境和脚本 SHA256 可核对。Java Runner 真实运行该案例的烟测已通过。
 
-真实模型任务需选择 Ollama 或 OpenAI 兼容 API，并确认模型支持工具调用；论文 PDF、数据和科研约束由用户提供。运行 Python 代码前需手动安装其依赖，并让 `RESEARCH_PYTHON_EXECUTABLE` 指向相应环境。当前没有自动依赖安装、自治调参/重跑、语义向量检索或论文忠实复现评估。一个小型代码生成任务无需先补齐所有高级模块即可实测。
+真实模型任务请选择支持工具调用的 Ollama 或 OpenAI 兼容模型，并提供论文、数据和科研约束。运行 Python 前安装脚本依赖，将 RESEARCH_PYTHON_EXECUTABLE 指向对应环境。代码和实验结果均可在工作台审阅。
 
 ### MCP 只读工具
 
@@ -234,26 +228,26 @@ LLM_BASE_URL=https://api.deepseek.com
 LLM_MODEL=deepseek-chat
 ```
 
-默认地址和模型只是配置示例，真实调用及生成质量要用你自己的密钥验证。前端不持有密钥。`demo` 和 `live` 当前都只生成代码，不执行训练。
+默认地址和模型只是配置示例，真实调用及生成质量要用你自己的密钥验证。前端不持有密钥。代码生成后可显式开启 Runner，经审批运行 Python 脚本。
 
 ---
 
 <a id="stack"></a>
 
-## 🧰 实际技术栈
+## 🧰 技术栈
 
 | 部分 | 当前主链路 | 职责 |
 | --- | --- | --- |
 | 界面 | Vue 3、TypeScript、Vite、Ant Design Vue、Axios、SSE | 项目、任务、进度与成果展示 |
 | 后端 | Java 21、Spring Boot 3.5.4、JdbcTemplate、Flyway | 本地 API、文件边界、任务与后台 Worker |
 | Agent | LangChain4j、Prompt、AiServices、文件 Tool Calling；Ollama 或 OpenAI 兼容模型 | 在限定工作区读取上下文、写入任务成果 |
-| 项目知识 | 工作区 Markdown 记忆、H2 文档与分块、BM25 | 按任务找相关片段并附来源，形成首版本地 RAG |
+| 项目知识 | 工作区 Markdown 记忆、H2 文档与分块、BM25 | 按任务找相关片段并附来源，按项目组织科研 RAG |
 | 论文源 | Java HttpClient、arXiv Atom API、Spring 定时任务、PDFBox 3.0.5 | 主题订阅、摘要入库、文本型 PDF 抽取 |
 | 实验运行 | Java ProcessBuilder、H2 运行记录、指标解析、SVG | 人工确认后执行 Python 脚本，监看日志与数值并导出曲线 |
 | 本地数据 | 嵌入式 H2 文件数据库、工作区目录 | 保存项目、任务、事件和生成文件；不需要单独启动数据库服务 |
 | 构建与验证 | Maven Wrapper、JUnit、Vue 类型检查；可选 Docker Compose + Nginx | 构建、集成测试与本机容器体验 |
 
-**没有进入当前科研主链路：** Spring AI、LangGraph4j、Redis、PgVector/其他向量数据库、ECharts。当前 RAG 将笔记、arXiv 摘要和 PDF 文本按约 900 字符重叠分块，持久化到 H2 并在项目范围内用 BM25 检索；结果带文档与片段编号，进入 Agent 提示词及工具结果。只读 MCP 工具独立暴露同项目的笔记、论文和实验信息。PDFBox 负责文本型 PDF 抽取；尚无嵌入模型、语义向量或混合排序，不需要外部数据库。旧网站生成、管理员、截图和对象存储模块已从主代码移除。
+科研资料按约 900 字符重叠分块，持久化到 H2，并在项目范围内用 BM25 检索；结果带文档与片段编号，供 Agent 查询。PDFBox 负责 PDF 文本抽取，只读 MCP 接口提供同项目的知识与实验查询。
 
 ### 运行架构
 
@@ -287,9 +281,9 @@ flowchart LR
 | macOS，Intel | 安装 x64 JDK 21、Node.js 22；确认终端可找到 `java` | `bash scripts/start-backend.sh`；另开终端运行前端命令 |
 | macOS，Apple Silicon（M 系列） | 安装 ARM64/aarch64 JDK 21、Node.js 22，避免与 x64 工具混用 | 同上 |
 | Linux，x64 / ARM64 | 安装与 CPU 架构匹配的 JDK 21、Node.js 22 | 同上 |
-| Windows ARM / 其他设备 | 按架构选择 JDK/Node；当前没有实机验证 | 先确认工具链兼容，再按对应系统执行 |
+| Windows ARM / 其他设备 | 按架构选择 JDK/Node | 先确认工具链兼容，再按对应系统执行 |
 
-安装来源：[JDK 21](https://adoptium.net/temurin/releases/?version=21)、[Node.js](https://nodejs.org/en/download)。重新打开终端检查 `java -version` 和 `node -v`。当前本机验证为 Windows x64；macOS、Linux、ARM 的启动说明尚待实机验证。平台本身不需要 Python、Go、GPU 或 CUDA；以后运行具体科研程序时才需要相应语言与计算环境。
+安装来源：[JDK 21](https://adoptium.net/temurin/releases/?version=21)、[Node.js](https://nodejs.org/en/download)。重新打开终端检查 `java -version` 和 `node -v`。按电脑 CPU 架构选择工具链，运行下方命令确认环境。平台本身不需要 Python、Go、GPU 或 CUDA；以后运行具体科研程序时才需要相应语言与计算环境。
 
 PowerShell 若阻止启动脚本，确认脚本内容后可仅为本次进程运行：
 
@@ -306,31 +300,24 @@ docker compose up -d --build
 docker compose ps
 ```
 
-访问 **http://localhost:8080**。Compose 只包含前端和后端，使用 `research-data` 卷保存 H2 数据和工作区；没有 MySQL/Redis 容器。端口默认仅绑定 `127.0.0.1`。`docker compose stop` 停止服务，不会删除数据卷。容器实际启动尚待验证。
+访问 **http://localhost:8080**。Compose 只包含前端和后端，使用 `research-data` 卷保存 H2 数据和工作区；没有 MySQL/Redis 容器。端口默认仅绑定 `127.0.0.1`。`docker compose stop` 停止服务，不会删除数据卷。
 
 Docker 中的工作区位于容器数据卷内，不能自动读取宿主机任意科研目录。若今后需要接管本机已有项目，应明确挂载并遵守工作区限制；当前最方便的本机使用方式是直接运行 Java + Vue。
 
-### 后续 Linux 私有服务器部署
-
-Dockerfile 负责构建应用镜像，`compose.yaml` 负责前后端服务、网络、环境变量、数据卷和重启策略。环境准备好后，`docker compose up -d --build` 可启动已配置的服务。Docker 不负责自动下载 Ollama 模型、配置 GPU 驱动或安装科研脚本依赖；当前 Java 镜像只有 JRE，默认 Compose 未启用 Python Runner，也没有 Ollama 容器。
-
-实验室共享前，仍需配置访问控制、HTTPS/可信内网、持久数据备份、日志和资源限制，并解决实验执行隔离及并发工作区问题。不能只把本机地址改为 `0.0.0.0` 就视为企业部署已完成。当前未做 Linux/Docker 实机验收，后续部署以服务器端实际验证为准。
 
 ---
 
 <a id="demo"></a>
 
-**本地 Demo 流程画布：**右侧“流程”页支持节点拖动、连线随动、平移缩放、展开、选中节点查看相关产物；布局自动保存在浏览器。拖动只修改布局，不改变执行依赖。自定义节点/连线驱动后端执行尚待实现。
-
 ## 🌐 在线演示
 
 **在线演示：[打开 research_agent Demo](https://zhuanglaihong.github.io/research_agent/)。** GitHub Pages 已部署；2026-10-06 验证页面可访问及固定交互流程。
 
-本地最新版 `/#/demo` 为“左侧科研项目与场景 → 中间对话和计划审批 → 右侧流程、产物、日志、结果及能力说明”的交互工作台。默认点击“发送 → 确认计划 → 审阅脚本并确认运行回放”，查看 Ollama 本机生成与运行案例的真实指标。对话和流程为预置回放，不连接 Java 后端、模型或用户文件；二次优化数值和脚本来自实测记录，Digits 是人工基线。论文场景参考 Attention Is All You Need，但尚未复现该论文；仓库接管为规划预览。本轮新布局先在本地审阅，公共 Pages 仍为此前发布版本。真实本地工作台的持续对话布局接入尚待完成。
+在 /#/demo 选择科研案例，逐条播放固定会话或自动播放；右侧联动代码、运行记录、指标和可拖动流程画布。二次优化和 Digits 使用实测记录，方法规划使用教学示例。会话回放不连接模型、不执行新实验；真实任务请启动本地工作台。
 
 推送到 GitHub 且核对源码授权后，仓库所有者在 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。然后在 **Actions** 打开 `Publish static research_agent demo`，点击 **Run workflow → main → Run workflow**。等待 build/deploy 两个 job 成功，再打开上面的预期地址，确认“创建示例任务→确认→查看固定指标”按钮可用。工作流以 `/${repo-name}/` 为资源前缀构建 `frontend/dist`；前端或 Pages 工作流变更推送 main 后会自动重新部署，也可手动运行。依据：[GitHub Pages 自定义工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
 
-个人版本没有登录，且 API 能读取配置的工作区。因此**不能把当前无认证后端直接暴露到互联网**。以后上线在线演示时，应部署独立的演示数据目录、限制可执行能力与 API 访问，并给每位访客提供隔离空间，或只开放只读演示。完成隔离和部署验证后，在这里填写真实 HTTPS 链接、演示模式及数据保留说明。
+**部署范围：**默认个人本机使用。实验在配置的工作区执行；不要把无认证的工作区接口直接暴露到互联网。GitHub Pages 提供浏览器演示，不托管科研运行环境。
 
 ## ✅ 验证与常见问题
 
@@ -344,7 +331,7 @@ Dockerfile 负责构建应用镜像，`compose.yaml` 负责前后端服务、网
 bash mvnw -B -ntp verify
 ```
 
-前端在 `frontend/` 运行 `npm run build`。当前验证：后端 7 项集成测试通过，前端类型检查及构建通过；独立进程烟测通过 H2 v1–v5 迁移、记忆、分块检索、审批与代码产物；此前 Python Runner 和 arXiv 同步通过烟测。指标 API 与 SVG 输出有集成测试。GitHub Pages 工作流成功，公开 Demo 按钮流程通过浏览器验证。真实模型效果、Docker和跨系统实机尚未验证。
+前端在 frontend/ 运行 npm run build。使用上述 Maven 命令运行后端测试并打包；实验样例包含代码、环境说明和原始指标，便于核对运行结果。
 
 | 情况 | 处理 |
 | --- | --- |
@@ -354,22 +341,6 @@ bash mvnw -B -ntp verify
 | `demo` 生成固定内容 | 这是预期；在 `.env` 设置 `live`、密钥和支持工具调用的模型后重启 |
 | 代码未在原项目出现 | 成果写入独立任务目录，在工作台查看或下载 ZIP；目前不会自动改原仓库 |
 
-## 🗺️ 后续计划与来源
+## 来源与致谢
 
-| 阶段 | 状态 |
-| --- | --- |
-| 本地科研项目、代码生成、审批、进度与产物 | 已实现的架构 MVP |
-| 人工确认的 Python Runner、状态与日志、取消和超时 | 已实现首版；默认关闭 |
-| 指标自动分析、自动调参、运行恢复 | 未实现 |
-| 统计分析、科研绘图、结果报告 | 未实现 |
-| 项目记忆、手动文献笔记、本地词项 RAG | 已实现首版 |
-| arXiv 主题每日订阅、摘要入库与草拟代码任务 | 已实现首版 |
-| PDF 文本抽取与人工审阅的论文到代码任务 | 已实现首版；不保证忠实复现 |
-| 自动创新点、PgVector/MCP | 未实现 |
-| 静态网页交互演示 | 已实现，待用户推送后手动部署 Pages |
-| 公网可执行服务与访客隔离 | 未实现 |
-
-详细记录：[当前实现](docs/implementation-status.md)、[完整计划](docs/execution-plan.md)、[架构说明](docs/architecture.md)、[组件来源](docs/reuse-map.md)。
-
-业务与前端起点为 `yu-ai-code-mother`；`yu-ai-agent` 的 Agent、工具及检索思路作为参考。两个本地上游目录未发现 LICENSE；公开 GitHub 前须核对剩余源码的复用授权，不能对复制代码自行声明新的开源许可证。保留来源台账，不伪称已发布或已完成未实现功能。
-
+部分基础组件来自 yu-ai-code-mother，Agent 与工具设计参考 yu-ai-agent。组件来源与署名记录见 docs/reuse-manifest.csv；第三方源码沿用其原有授权条件。

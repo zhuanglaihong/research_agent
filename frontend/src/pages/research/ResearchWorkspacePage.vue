@@ -58,7 +58,7 @@
             <p>{{ paper.abstractText }}</p>
             <a-button size="small" @click="draftPaperTask(paper)">根据摘要草拟代码任务</a-button>
           </li></ul>
-          <p class="context-help">这里展示论文原始摘要；尚未由模型自动提炼创新点或评价论文质量。</p>
+          <p class="context-help">论文原始摘要保留作者信息与来源，可作为项目检索与代码任务的上下文。</p>
         </a-tab-pane>
       </a-tabs>
     </a-card>
