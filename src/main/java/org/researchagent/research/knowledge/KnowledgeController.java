@@ -7,6 +7,7 @@ import org.researchagent.exception.ErrorCode;
 import org.researchagent.research.LocalWorkspace;
 import org.researchagent.research.project.ResearchProjectService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -70,5 +71,11 @@ public class KnowledgeController {
             @RequestParam String query) {
         project(projectId);
         return ResultUtils.success(knowledge.search(projectId, query, 5));
+    }
+    @DeleteMapping("/knowledge/{documentId}")
+    public BaseResponse<Boolean> delete(@PathVariable long projectId, @PathVariable long documentId) {
+        project(projectId);
+        knowledge.delete(projectId, documentId);
+        return ResultUtils.success(true);
     }
 }

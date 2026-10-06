@@ -58,7 +58,7 @@ class ResearchWorkbenchTest {
     @TestConfiguration static class Database {
         @Bean JdbcTemplate jdbcTemplate(DataSource source) throws Exception {
             var jdbc=new JdbcTemplate(source);
-            for (String name:List.of("V1__local_research_schema.sql", "V2__knowledge_documents.sql", "V3__paper_subscriptions.sql", "V4__paper_to_code.sql")) {
+            for (String name:List.of("V1__local_research_schema.sql", "V2__knowledge_documents.sql", "V3__paper_subscriptions.sql", "V4__paper_to_code.sql", "V5__knowledge_chunks.sql")) {
                 String sql=new String(new ClassPathResource("db/local/"+name).getInputStream().readAllBytes(),StandardCharsets.UTF_8);
                 try (var connection=source.getConnection()) {
                     org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(connection,
@@ -130,6 +130,24 @@ class ResearchWorkbenchTest {
                 .contains("RETRIEVAL", "Early Stopping Paper");
         assertThat(body(mvc.perform(get("/research-projects/"+project+"/memory"))).path("data").asText())
                 .isEqualTo("数据集由用户提供");
+    }
+    @Test void chunkRetrievalFindsLateMethodAndRespectsProjectAndDeletion() throws Exception {
+        String first = project("python");
+        String second = project("python");
+        String content = "Background ".repeat(180) + " rareoptimizer uses cosine scheduling and gradient clipping.";
+        var added = body(mvc.perform(post("/research-projects/"+first+"/knowledge")
+                .contentType("application/json").content(json.writeValueAsString(Map.of("source", "Long Method", "content", content)))));
+        String documentId = added.path("data").path("id").asText();
+        var hits = body(mvc.perform(get("/research-projects/"+first+"/knowledge/search").param("query", "rareoptimizer")));
+        assertThat(hits.path("data").size()).isEqualTo(1);
+        assertThat(hits.path("data").get(0).path("excerpt").asText()).contains("rareoptimizer");
+        assertThat(hits.path("data").get(0).path("chunkId").asLong()).isPositive();
+        assertThat(body(mvc.perform(get("/research-projects/"+second+"/knowledge/search").param("query", "rareoptimizer")))
+                .path("data").size()).isZero();
+        assertThat(body(mvc.perform(delete("/research-projects/"+first+"/knowledge/"+documentId)))
+                .path("code").asInt()).isZero();
+        assertThat(body(mvc.perform(get("/research-projects/"+first+"/knowledge/search").param("query", "rareoptimizer")))
+                .path("data").size()).isZero();
     }
     @Test void paperSubscriptionCanBeSavedWithoutFetchingTheNetwork() throws Exception {
         String project = project("python");

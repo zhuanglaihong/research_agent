@@ -66,8 +66,7 @@ public class PaperToCodeService {
             statement.setLong(1, projectId); statement.setString(2, name); statement.setString(3, source);
             statement.setString(4, savedText); statement.setString(5, brief); return statement;
         }, key);
-        // The retrieval index is rebuilt from this durable document in the knowledge module.
-        knowledge.add(projectId, source.substring(0, Math.min(240, source.length())), text.substring(0, Math.min(20_000, text.length())));
+        knowledge.add(projectId, source.substring(0, Math.min(240, source.length())), text);
         return new Method(key.getKey().longValue(), name, source, brief, text.length());
     }
 

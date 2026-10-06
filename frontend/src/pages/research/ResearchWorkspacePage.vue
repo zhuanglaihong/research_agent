@@ -13,7 +13,7 @@
           <a-button type="primary" :loading="savingMemory" class="context-action" @click="saveMemory">保存记忆</a-button>
         </a-tab-pane>
         <a-tab-pane key="knowledge" :tab="`文献笔记 (${knowledgeDocs.length})`">
-          <p class="context-help">先贴论文摘要或方法笔记。任务开始时检索相关摘录，进度里会显示命中的来源。</p>
+          <p class="context-help">项目资料按片段索引并用本地 BM25 排序；任务检索会附带来源和片段编号。无需模型密钥或外部数据库。</p>
           <div class="knowledge-input">
             <a-input v-model:value="noteSource" :maxlength="240" placeholder="来源：论文标题、URL 或笔记名称" />
             <a-textarea v-model:value="noteContent" :rows="4" :maxlength="20000" placeholder="粘贴摘要、方法要点或实验设置" />
@@ -21,9 +21,14 @@
           </div>
           <div class="knowledge-search">
             <a-input-search v-model:value="searchQuery" placeholder="检索已保存的笔记" enter-button="检索" @search="runSearch" />
-            <ul v-if="searchHits.length" class="knowledge-hits"><li v-for="hit in searchHits" :key="hit.id"><strong>{{ hit.source }}</strong><p>{{ hit.excerpt }}</p></li></ul>
+            <ul v-if="searchHits.length" class="knowledge-hits"><li v-for="hit in searchHits" :key="hit.chunkId"><strong>{{ hit.source }} · 文档 #{{ hit.id }} / 片段 #{{ hit.chunkId }}</strong><p>{{ hit.excerpt }}</p></li></ul>
             <a-empty v-else-if="searched" description="没有匹配的笔记" />
           </div>
+          <h3>已收录资料</h3>
+          <ul class="knowledge-hits"><li v-for="document in knowledgeDocs" :key="document.id">
+            <strong>{{ document.source }}</strong>
+            <a-button size="small" danger @click="removeNote(document)">删除</a-button>
+          </li></ul>
         </a-tab-pane>
         <a-tab-pane key="papers" :tab="`每日论文 (${papers.length})`">
           <div class="paper-import">
@@ -115,7 +120,7 @@ import ExperimentRuns from '@/components/ExperimentRuns.vue'
 import { getResearchProject, type ResearchProject } from '@/api/researchProjectController'
 import { listTasks, createTask, getTask, approveTask, cancelTask, getTaskEvents, getTaskFiles, getTaskFile, type ResearchTask, type TaskEvent } from '@/api/researchTaskController'
 import { API_BASE_URL } from '@/config/env'
-import { getProjectMemory, saveProjectMemory, listKnowledge, addKnowledge, searchKnowledge, type KnowledgeDocument, type KnowledgeHit } from '@/api/researchKnowledge'
+import { getProjectMemory, saveProjectMemory, listKnowledge, addKnowledge, searchKnowledge, deleteKnowledge, type KnowledgeDocument, type KnowledgeHit } from '@/api/researchKnowledge'
 import { getPaperSubscription, savePaperSubscription, listPapers, syncPapers, listPaperMethods, uploadPaperMethod, createPaperMethodTask, type PaperItem, type PaperSubscription, type PaperMethod } from '@/api/researchPaper'
 
 const route = useRoute()
@@ -295,6 +300,16 @@ const addNote = async () => {
     message.success('文献笔记已保存')
   } catch (error) { message.error(error instanceof Error ? error.message : '保存失败') }
   finally { addingNote.value = false }
+}
+const removeNote = async (document: KnowledgeDocument) => {
+  if (!window.confirm(`删除知识库资料“${document.source}”？`)) return
+  try {
+    const result = await deleteKnowledge(projectId, document.id)
+    if (result.data.code !== 0) throw new Error(result.data.message)
+    knowledgeDocs.value = knowledgeDocs.value.filter(item => item.id !== document.id)
+    searchHits.value = searchHits.value.filter(item => item.id !== document.id)
+    message.success('资料已删除')
+  } catch (error) { message.error(error instanceof Error ? error.message : '删除失败') }
 }
 const runSearch = async () => {
   if (!searchQuery.value.trim()) return

@@ -70,7 +70,7 @@ public class ResearchFileTools {
         var hits = knowledge.search(projectId, query, 4);
         tasks.event(taskId, "RETRIEVAL", Map.of("count", hits.size(), "query", query));
         return hits.isEmpty() ? "没有相关笔记" : hits.stream()
-                .map(hit -> "[" + hit.source() + "#" + hit.id() + "] " + hit.excerpt())
+                .map(hit -> "[" + hit.source() + "#" + hit.id() + "/" + hit.chunkId() + "] " + hit.excerpt())
                 .reduce("", (left, right) -> left + right + "\n");
     }
 

@@ -13,7 +13,7 @@
   <a href="#demo">在线演示</a>
 </p>
 
-> **当前阶段：本地单用户架构 MVP。** 下载后无需注册或登录，默认不需要 MySQL、Redis、Docker、Python 或 GPU。启动需要 JDK 21；使用 Web 界面还需要 Node.js 22。默认 `demo` 模式可验证任务流程，真实模型生成需配置 API 密钥。项目记忆、本地词项检索、arXiv 主题订阅和可选 Python 实验运行已实现首版；向量检索、MCP、自动调参和论文级绘图仍在规划中。
+> **当前阶段：本地单用户架构 MVP。** 下载后无需注册或登录，默认不需要 MySQL、Redis、Docker、Python 或 GPU。启动需要 JDK 21；使用 Web 界面还需要 Node.js 22。默认 `demo` 模式可验证任务流程，真实模型生成需配置 API 密钥。项目记忆、本地分块 BM25 检索、文本型 PDF 导入、arXiv 主题订阅和可选 Python 实验运行已实现首版；向量检索、MCP、自动调参和论文级绘图仍在规划中。
 
 ## 📑 导航
 
@@ -38,7 +38,7 @@
 | 科研编程 Agent | 列出和读取项目文件，通过工具生成代码、配置和说明 | 当前不会运行、测试或覆盖原项目代码 |
 | 任务与进度 | 后台队列、状态事件、断线后查看历史、总结 | 单后端实例；重启时运行中的任务标为中断 |
 | 项目记忆 | 在工作区保存和编辑 `.research_agent/memory.md`，任务生成时读取 | 用户自行维护，不会自动概括全部历史 |
-| 文献笔记检索 | 保存来源和正文，在项目内按关键词检索；相关片段注入 Agent 提示词 | 本地词项检索，不是向量检索或联网论文搜索 |
+| 科研知识库 RAG | 保存笔记、arXiv 摘要和 PDF 文本；项目内分块 BM25 检索，显示来源与片段编号，可删除资料 | 本地关键词相关性，不是向量语义检索 |
 | 每日论文 | 设置英文研究主题，手动或每天 08:00 从 arXiv 拉取最新元数据与原始摘要，去重并加入项目检索 | 不下载 PDF；尚未自动提炼创新点或评价论文质量 |
 | 论文到代码入口 | 上传文本型 PDF，抽取并审阅方法原文片段，创建带来源、语言与复现交付要求的待确认任务；arXiv 摘要也可草拟任务 | 演示模式只生成固定样例；真实论文复现需模型、人工核对与实验验证 |
 | 本地实验运行 | 可选开启 Python Runner；选生成脚本、确认命令后后台执行，查看状态与日志，并草拟分析任务 | 默认关闭；5 分钟/1 MB 限制；无容器/系统沙箱，尚未自动调参 |
@@ -154,13 +154,13 @@ LLM_MODEL=deepseek-chat
 | 界面 | Vue 3、TypeScript、Vite、Ant Design Vue、Axios、SSE | 项目、任务、进度与成果展示 |
 | 后端 | Java 21、Spring Boot 3.5.4、JdbcTemplate、Flyway | 本地 API、文件边界、任务与后台 Worker |
 | Agent | LangChain4j、Prompt、AiServices、文件 Tool Calling | 在限定工作区读取上下文、写入任务成果 |
-| 项目知识 | 工作区 Markdown 记忆、H2 文献笔记、词项检索 | 按任务找相关片段并附来源，形成首版本地 RAG |
-| 论文源 | Java HttpClient、arXiv Atom API、Spring 定时任务 | 主题订阅、去重、摘要入库 |
+| 项目知识 | 工作区 Markdown 记忆、H2 文档与分块、BM25 | 按任务找相关片段并附来源，形成首版本地 RAG |
+| 论文源 | Java HttpClient、arXiv Atom API、Spring 定时任务、PDFBox 3.0.5 | 主题订阅、摘要入库、文本型 PDF 抽取 |
 | 实验运行 | Java ProcessBuilder、H2 运行记录、轮询日志 | 人工确认后执行 Python 脚本，超时/取消/日志限制 |
 | 本地数据 | 嵌入式 H2 文件数据库、工作区目录 | 保存项目、任务、事件和生成文件；不需要单独启动数据库服务 |
 | 构建与验证 | Maven Wrapper、JUnit、Vue 类型检查；可选 Docker Compose + Nginx | 构建、集成测试与本机容器体验 |
 
-**没有进入当前科研主链路：** Spring AI、LangGraph4j、Redis、PgVector/其他向量数据库、MCP、ECharts。当前 RAG 是 H2 文献笔记的本地词项检索，PDFBox 负责文本型 PDF 抽取，尚无嵌入模型或混合排序；不需要外部数据库。旧网站生成、管理员、截图和对象存储模块已从主代码移除。
+**没有进入当前科研主链路：** Spring AI、LangGraph4j、Redis、PgVector/其他向量数据库、MCP、ECharts。当前 RAG 将笔记、arXiv 摘要和 PDF 文本按约 900 字符重叠分块，持久化到 H2 并在项目范围内用 BM25 检索；结果带文档与片段编号，进入 Agent 提示词及工具结果。PDFBox 负责文本型 PDF 抽取；尚无嵌入模型、语义向量或混合排序，不需要外部数据库。旧网站生成、管理员、截图和对象存储模块已从主代码移除。
 
 ### 运行架构
 
