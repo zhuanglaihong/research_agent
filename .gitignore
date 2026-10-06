@@ -44,3 +44,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local development records ###
+/AGENTS.md
+/docs/execution-plan.md
+/docs/reuse-manifest.csv
+/docs/reuse-map.md
+/docs/upstream/

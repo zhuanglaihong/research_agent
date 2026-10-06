@@ -1,8 +1,8 @@
 <h1 align="center">🔬 research_agent</h1>
 
 <p align="center">
-  <b>科研编程与实验助手</b><br>
-  <i>让科研想法跑起来，让实验过程看得见。</i>
+  <b>个人的全流程科研智能助手</b><br>
+  <i>让AI帮你全自动托管研究：从一个想法，到可执行的代码和可验证实验结果</i>
 </p>
 
 <p align="center">
@@ -142,8 +142,6 @@ LLM_MODEL=qwen3:8b
 
 [Ollama 实验闭环](examples/ollama-feedback-case/README.md)保存了模型生成脚本、人工批准运行、工具事件、指标和分析报告；[Digits 分类基线](examples/digits-baseline/README.md)提供 CPU 可运行的代码与三随机种子结果。案例用于核对具体链路与实验记录，结论以各自数据和运行条件为准。
 
-## 📖 文档与来源
+## 📖 使用文档
 
 [详细使用指南](docs/user-guide.md) · [运行架构](docs/architecture.md) · [实验闭环记录](docs/chain-validation.md)
-
-部分基础组件来自 yu-ai-code-mother，Agent 与工具设计参考 yu-ai-agent。组件来源与署名见 [复用台账](docs/reuse-manifest.csv)，第三方源码沿用其原有授权条件。
