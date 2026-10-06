@@ -1,16 +1,18 @@
 <template>
   <a-layout class="basic-layout">
-    <GlobalHeader />
+    <GlobalHeader v-if="route.path !== '/demo'" />
     <a-layout-content class="content">
       <router-view />
     </a-layout-content>
-    <GlobalFooter />
+    <GlobalFooter v-if="route.path !== '/demo'" />
   </a-layout>
 </template>
 
 <script setup lang="ts">
 import GlobalHeader from '@/components/GlobalHeader.vue'
 import GlobalFooter from '@/components/GlobalFooter.vue'
+import { useRoute } from 'vue-router'
+const route = useRoute()
 </script>
 
 <style scoped>

@@ -324,7 +324,7 @@ Dockerfile 负责构建应用镜像，`compose.yaml` 负责前后端服务、网
 
 **在线演示：[打开 research_agent Demo](https://zhuanglaihong.github.io/research_agent/)。** GitHub Pages 已部署；2026-10-06 验证页面可访问及固定交互流程。
 
-仓库已准备 `/#/demo` 静态交互演示：访问者可依次点击“创建示例任务→确认并生成样例→查看检索事件与代码预览→查看固定实验曲线”。所有内容都是预置的，不连接 Java 后端、模型或用户文件。与本地完整工作台的区别在页面顶部明确标注。
+本地最新版 `/#/demo` 为“左侧科研项目与场景 → 中间对话和计划审批 → 右侧流程、产物、日志、结果及能力说明”的交互工作台。默认点击“发送 → 确认计划 → 审阅脚本并确认运行回放”，查看 Ollama 本机生成与运行案例的真实指标。对话和流程为预置回放，不连接 Java 后端、模型或用户文件；二次优化数值和脚本来自实测记录，Digits 是人工基线。论文场景参考 Attention Is All You Need，但尚未复现该论文；仓库接管为规划预览。本轮新布局先在本地审阅，公共 Pages 仍为此前发布版本。真实本地工作台的持续对话布局接入尚待完成。
 
 推送到 GitHub 且核对源码授权后，仓库所有者在 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。然后在 **Actions** 打开 `Publish static research_agent demo`，点击 **Run workflow → main → Run workflow**。等待 build/deploy 两个 job 成功，再打开上面的预期地址，确认“创建示例任务→确认→查看固定指标”按钮可用。工作流以 `/${repo-name}/` 为资源前缀构建 `frontend/dist`；前端或 Pages 工作流变更推送 main 后会自动重新部署，也可手动运行。依据：[GitHub Pages 自定义工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
 
