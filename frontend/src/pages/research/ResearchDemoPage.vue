@@ -3,8 +3,8 @@
     <section class="intro">
       <div>
         <p class="eyebrow">INTERACTIVE DEMO · NO BACKEND REQUIRED</p>
-        <h1>从论文方法到代码与实验结果</h1>
-        <p>用一个固定案例体验 research_agent 的论文导入、知识检索、人工确认、代码产物和实验指标。</p>
+        <h1>你的科研项目，有一个协作助手</h1>
+        <p>管理知识、实现方法、阅读代码、执行实验与整理结果。先浏览五个场景，再体验下方任务流程与真实训练案例。</p>
         <a-alert type="warning" show-icon message="上方交互为固定样例，下方真实案例为本机训练结果快照；网页不调用大模型、不执行训练、不读取你的文件。" />
       </div>
       <div class="intro-action">
@@ -13,6 +13,7 @@
       </div>
     </section>
 
+    <ResearchCapabilityTour />
     <div class="demo-grid">
       <section class="context-column">
         <a-card title="科研项目" :bordered="false">
@@ -20,8 +21,8 @@
           <p>语言：Python · 目标：生成训练脚本样例并说明实验边界</p>
         </a-card>
         <a-card title="项目记忆" :bordered="false">
-          <p>固定随机种子；验证集与训练集分开；报告 accuracy 和 loss；未经运行的结果要明确标注。</p>
-          <small>本地模式保存为 .research_agent/memory.md</small>
+          <p>固定随机种子；验证集与训练集分开；报告 accuracy 和 loss。Agent 读取项目记忆，并持久化当前任务中的对话和工具消息。</p>
+          <small>项目记忆：.research_agent/memory.md · 任务消息：H2，最多 20 条</small>
         </a-card>
         <a-card title="文献笔记" :bordered="false">
           <a-tag color="blue">Early stopping 方法笔记</a-tag>
@@ -32,6 +33,14 @@
           <a-tag color="purple">PDF 方法片段</a-tag>
           <p>使用独立验证集监控损失；训练脚本需要记录随机种子、每轮指标与早停条件。</p>
           <small>本地模式可上传文本型 PDF，审阅抽取片段后创建待确认的代码任务。</small>
+        </a-card>
+        <a-card title="MCP 科研工具 · 只读" :bordered="false">
+          <p>本地客户端可发现并调用绑定项目的科研工具。</p>
+          <a-tag color="blue">search_research_notes</a-tag>
+          <a-tag color="cyan">list_collected_papers</a-tag>
+          <a-tag color="geekblue">list_experiments</a-tag>
+          <a-tag color="purple">inspect_experiment</a-tag>
+          <small>Streamable HTTP · JSON-RPC · 不开放执行脚本</small>
         </a-card>
       </section>
 
@@ -86,6 +95,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import RealExperimentCase from '@/components/RealExperimentCase.vue'
+import ResearchCapabilityTour from '@/components/ResearchCapabilityTour.vue'
 
 type Phase = 'ready' | 'approval' | 'running' | 'done'
 const phase = ref<Phase>('ready')
@@ -96,10 +106,10 @@ const showMetrics = ref(false)
 const timers: ReturnType<typeof setTimeout>[] = []
 const events = [
   '任务已排队，等待后台 Worker 领取',
-  '读取项目记忆：固定随机种子、独立验证集',
-  '检索到 1 条笔记：Early stopping 方法笔记',
-  '生成 train.py 与 README.md',
-  '任务完成：请人工检查并运行代码',
+  '读取项目记忆与当前任务的历史上下文',
+  '调用笔记检索工具：Early stopping 方法笔记',
+  '生成 train.py 与 README.md 到隔离产物目录',
+  '任务完成：请检查代码，再人工确认是否运行',
 ]
 const visibleEvents = computed(() => events.slice(0, visibleCount.value))
 const step = computed(() => phase.value === 'ready' ? 0 : phase.value === 'approval' ? 1 : phase.value === 'done' ? 4 : visibleCount.value >= 3 ? 3 : 2)
@@ -161,7 +171,8 @@ h1 { color:#172033; font-size:34px; margin:8px 0 12px; }
 .demo-grid { display:grid; grid-template-columns:360px minmax(0,1fr); gap:20px; }
 .context-column { display:grid; gap:16px; align-content:start; }
 .context-column p { color:#475467; line-height:1.7; }
-.context-column small { color:#98a2b3; }
+.context-column small { display:block; color:#98a2b3; line-height:1.7; margin-top:10px; }
+.context-column :deep(.ant-tag) { margin-bottom:8px; font-size:11px; }
 .task-prompt { border-left:3px solid #1677ff; background:#f5f8ff; padding:16px; line-height:1.7; }
 .steps { margin:26px 0; }
 .hint { color:#667085; padding:28px 0; }
