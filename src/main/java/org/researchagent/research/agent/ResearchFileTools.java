@@ -39,7 +39,7 @@ public class ResearchFileTools {
                     .filter(p -> !p.contains(".git") && !p.contains("node_modules") && !p.contains(".research_agent") && !p.contains(".env"))
                     .limit(100).toList();
             tasks.event(taskId,"TOOL",Map.of("name","listProjectFiles","count",paths.size()));
-            return String.join("\n",paths);
+            return paths.isEmpty()?"项目中没有可列出的文件。":String.join("\n",paths);
         }
     }
     @Tool("读取项目文本文件或本任务已生成的文件，不超过 128 KB")
@@ -50,7 +50,8 @@ public class ResearchFileTools {
         if (!Files.exists(target)) target=workspaces.resolve(project,path);
         if (!Files.isRegularFile(target) || Files.size(target)>131072) throw new IOException("文件不存在或超过读取限制");
         tasks.event(taskId,"TOOL",Map.of("name","readProjectFile","path",path));
-        return Files.readString(target);
+        String content=Files.readString(target);
+        return content.isBlank()?"文件为空。":content;
     }
     @Tool("把科研代码、说明或配置保存到独立任务产物目录，不覆盖原仓库")
     public String writeArtifact(@P("相对文件路径") String path, @P("完整文本内容") String content) throws IOException {

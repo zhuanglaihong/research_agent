@@ -13,7 +13,7 @@
   <a href="#demo">在线演示</a>
 </p>
 
-> **当前阶段：本地单用户架构 MVP。** 下载后无需注册或登录，默认不需要 MySQL、Redis、Docker、Python 或 GPU。启动需要 JDK 21；使用 Web 界面还需要 Node.js 22。默认 `demo` 模式可验证任务流程，真实模型生成需配置 API 密钥。项目记忆、本地分块 BM25 检索、文本型 PDF 导入、arXiv 主题订阅和可选 Python 实验运行已实现首版；向量检索、MCP、自动调参和论文级绘图仍在规划中。
+> **当前阶段：简历版 Agent MVP。** 下载后无需注册登录；默认 H2、arXiv、PDF 文本处理和本地分块 BM25 检索，默认不需要 MySQL、Redis、Docker、Python 或 GPU。启动需要 JDK 21；Web 界面还需 Node.js 22。`demo` 模式使用固定样例；`live` 模式支持 Ollama 本地模型和 OpenAI 兼容 API，后者需要 API Key。LangChain4j 任务工具包含文献/笔记检索、项目文件、论文列表和实验结果观察；另提供绑定项目的只读 MCP Streamable HTTP 工具。具体边界及限制见下表。Python Runner 默认关闭，需人工确认，限短时运行。未经认证的服务只允许本机使用。
 
 ## 📑 导航
 
@@ -35,13 +35,14 @@
 | --- | --- | --- |
 | 本地项目 | 创建项目、选择主要语言、查看项目目录 | 默认在 `data/workspaces/1/` 中建目录；显式路径也必须在该目录内 |
 | 自然语言任务 | 输入需求、审阅固定步骤、批准或取消 | 步骤仍是模板，不是模型自主制定研究计划 |
-| 科研编程 Agent | 列出和读取项目文件，通过工具生成代码、配置和说明 | 当前不会运行、测试或覆盖原项目代码 |
+| 科研编程 Agent | LangChain4j 工具调用：读取项目文件、检索资料、观察已有实验结果、生成隔离的代码产物；H2 保存有限任务消息窗口 | 不会自动改写原仓库；工具循环的完整计划/反思图仍有限 |
 | 任务与进度 | 后台队列、状态事件、断线后查看历史、总结 | 单后端实例；重启时运行中的任务标为中断 |
 | 项目记忆 | 在工作区保存和编辑 `.research_agent/memory.md`，任务生成时读取 | 用户自行维护，不会自动概括全部历史 |
 | 科研知识库 RAG | 保存笔记、arXiv 摘要和 PDF 文本；项目内分块 BM25 检索，显示来源与片段编号，可删除资料 | 本地关键词相关性，不是向量语义检索 |
 | 每日论文 | 设置英文研究主题，手动或每天 08:00 从 arXiv 拉取最新元数据与原始摘要，去重并加入项目检索 | 不下载 PDF；尚未自动提炼创新点或评价论文质量 |
 | 论文到代码入口 | 上传文本型 PDF，抽取并审阅方法原文片段，创建带来源、语言与复现交付要求的待确认任务；arXiv 摘要也可草拟任务 | 演示模式只生成固定样例；真实论文复现需模型、人工核对与实验验证 |
-| 实验助手 | 可选开启 Python Runner；人工确认后运行脚本，查看状态、日志、数值指标和 SVG 曲线，基于实际记录草拟分析任务 | 默认关闭；5 分钟/1 MB 日志限制；无系统沙箱，不会自主改参或重启实验 |
+| 实验助手 | 可选开启 Python Runner；人工确认后运行脚本，查看状态、日志、数值指标和 SVG 曲线；Agent 可读取已完成运行结果并草拟后续任务 | 默认关闭；5 分钟/1 MB 日志限制；无系统沙箱，不会自主改参或重启实验 |
+| MCP | `/api/mcp/projects/{projectId}` 暴露只读笔记、论文和实验查询工具 | 无认证，仅限回环本机；不提供执行或文件写工具 |
 | 成果 | 浏览生成文件、下载 ZIP | 每项任务使用独立产物目录 |
 
 **当前不需要账号。** 本机用户打开界面即可使用。数据保存在本机文件；`user_id=1` 是兼容旧数据库结构的内部值，不表示有用户系统。服务只应监听本机，不能把无认证的工作区接口直接暴露到公网。
@@ -70,7 +71,20 @@
 
 [Digits 分类基线](examples/digits-baseline/README.md) 可在 CPU 上实际训练，不需要模型密钥。三随机种子、固定训练/验证/测试划分、验证损失早停，输出 JSONL 指标、统计结果、SVG 曲线与混淆矩阵。当前实测测试准确率均值 96.39%，同一数据划分上样本标准差为 0；仅代表这个基线与划分。脚本人工编写，未验证 LLM 自动生成能力。在线 Demo 展示实测结果快照，运行环境和脚本 SHA256 可核对。Java Runner 真实运行该案例的烟测已通过。
 
-真实模型任务还需配置 `RESEARCH_AI_MODE=live`、`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`，所选模型应支持工具调用；论文 PDF、数据和科研约束由用户提供。运行 Python 代码前需手动安装其依赖，并让 `RESEARCH_PYTHON_EXECUTABLE` 指向相应环境。当前没有自动依赖安装、自治调参/重跑、语义向量检索或论文忠实复现评估。一个小型代码生成任务无需先补齐所有高级模块即可实测。
+真实模型任务需选择 Ollama 或 OpenAI 兼容 API，并确认模型支持工具调用；论文 PDF、数据和科研约束由用户提供。运行 Python 代码前需手动安装其依赖，并让 `RESEARCH_PYTHON_EXECUTABLE` 指向相应环境。当前没有自动依赖安装、自治调参/重跑、语义向量检索或论文忠实复现评估。一个小型代码生成任务无需先补齐所有高级模块即可实测。
+
+### MCP 只读工具
+
+本机后端同时提供绑定单个项目的只读 MCP Streamable HTTP 接口：
+
+```text
+POST http://127.0.0.1:8123/api/mcp/projects/{projectId}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-03-26   # initialize 之后的请求
+```
+
+提供 `search_research_notes`、`list_collected_papers`、`list_experiments`、`inspect_experiment`，用于让兼容 MCP 的本机客户端读取项目知识与实验结果。它不提供命令执行、文件写入或跨项目访问；默认 Origin 白名单适用于本机前端。接口没有登录认证，不得改为公网监听。提交 JSON-RPC `initialize` 后可调用 `tools/list` 和 `tools/call`；当前不支持服务端推送/SSE 会话流。
 
 ---
 
@@ -142,10 +156,77 @@ npm run dev -- --port 5173 --strictPort
 
 ### 5. 开启真实模型生成（可选）
 
-在根目录 `.env` 填入你自己的兼容 OpenAI 协议、支持工具调用的模型信息，然后重启后端：
+#### Windows 本机 Ollama：照着做即可
+
+本机使用 Ollama 时，**不需要申请 API Key，也不需要重新下载已安装的模型**。Agent 要用“聊天模型”来推理和调用工具。建议先选 `qwen3:8b`：它支持工具调用，而且已在本项目中实际验证。
+
+1. 打开 PowerShell，查看电脑上已下载的模型：
+
+   ```powershell
+   ollama list
+   ```
+
+   你会看到类似 `qwen3:8b` 的模型名称。若命令提示找不到 Ollama，先安装并启动 Ollama 桌面程序，再重新打开 PowerShell。本机服务地址通常是 `http://127.0.0.1:11434`。
+
+   本项目开发机当前已安装 `qwen3:8b`、`deepseek-coder:6.7b`、`bge-large:335m`。其中 `qwen3:8b` 已验证能调用 Agent 工具；`bge-large:335m` 是向量嵌入模型，不是聊天模型，本项目当前也不使用它。
+
+2. 确认 Ollama 服务能访问：
+
+   ```powershell
+   Invoke-RestMethod http://127.0.0.1:11434/api/tags
+   ```
+
+   如果能显示模型列表，继续下一步。如果连接失败，先从 Windows 开始菜单打开 Ollama，再运行这条命令。
+
+3. 在仓库根目录打开配置文件：
+
+   ```powershell
+   notepad .env
+   ```
+
+   找到并改成下面这些配置。**保留 `.env` 里的其他设置**，不要把配置贴到 Vue 前端；`LLM_API_KEY` 留空即可。
 
 ```dotenv
 RESEARCH_AI_MODE=live
+LLM_PROVIDER=ollama
+LLM_API_KEY=
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+LLM_MODEL=qwen3:8b
+```
+
+4. 保存 `.env`，在运行后端的 PowerShell 窗口按 `Ctrl+C` 停止旧服务，然后重新启动：
+
+   ```powershell
+   .\scripts\start-backend.ps1
+   ```
+
+   `.env` 只在后端启动时读取；修改后要重启后端才生效。前端继续按上面的步骤运行。
+
+5. 在网页中新建科研项目并提交一个小任务，批准后等待完成。成功时，任务事件会显示模型 `qwen3:8b`、提供方 `ollama` 和工具调用记录；代码会写入任务独立产物目录，不会覆盖原项目。
+
+如果 `ollama list` 中没有 `qwen3:8b`，可在 PowerShell 下载一次：
+
+```powershell
+ollama pull qwen3:8b
+```
+
+该模型约 5 GB，下载耗时取决于网络；已经存在时不要重复下载。Ollama 与 LangChain4j 使用兼容接口，模型需支持工具调用；Ollama 官方列出了 Qwen 3 等支持工具的模型。[Ollama 工具调用说明](https://ollama.com/blog/streaming-tool)。
+
+#### 部署到自己的服务器
+
+在服务器安装并启动 Ollama，下载一个支持工具调用的聊天模型；把上面五项配置写进服务器上的 `.env`，并将 `LLM_BASE_URL` 改为 **Java 后端所在主机/容器能够访问的 Ollama 地址**。Java 与 Ollama 在同一台非容器主机时可用 `http://127.0.0.1:11434/v1`；Java 在 Docker 容器中时，`127.0.0.1` 指向 Java 容器自身，必须改为容器网络中的 Ollama 服务名或宿主机可达地址。无需开放 Ollama 到公网，只需让后端能访问它。此仓库当前未验证容器化 Ollama 部署。
+
+#### 常见问题
+
+- **连接 Ollama 失败：**确认 Ollama 已启动，并在运行 Java 后端的那台机器上访问 `LLM_BASE_URL` 对应服务。
+- **模型不存在：**运行 `ollama list`，把 `.env` 的 `LLM_MODEL` 改成列表里的完整名称（含标签），或执行一次 `ollama pull 模型名称`。
+- **模型没有调用工具：**确认选的是聊天模型且支持工具调用；优先用本项目验证过的 `qwen3:8b`。`bge-large` 这类嵌入模型不能用于 Agent 对话。
+
+兼容云端 API 的配置示例：
+
+```dotenv
+RESEARCH_AI_MODE=live
+LLM_PROVIDER=openai-compatible
 LLM_API_KEY=your-private-key
 LLM_BASE_URL=https://api.deepseek.com
 LLM_MODEL=deepseek-chat
@@ -163,14 +244,14 @@ LLM_MODEL=deepseek-chat
 | --- | --- | --- |
 | 界面 | Vue 3、TypeScript、Vite、Ant Design Vue、Axios、SSE | 项目、任务、进度与成果展示 |
 | 后端 | Java 21、Spring Boot 3.5.4、JdbcTemplate、Flyway | 本地 API、文件边界、任务与后台 Worker |
-| Agent | LangChain4j、Prompt、AiServices、文件 Tool Calling | 在限定工作区读取上下文、写入任务成果 |
+| Agent | LangChain4j、Prompt、AiServices、文件 Tool Calling；Ollama 或 OpenAI 兼容模型 | 在限定工作区读取上下文、写入任务成果 |
 | 项目知识 | 工作区 Markdown 记忆、H2 文档与分块、BM25 | 按任务找相关片段并附来源，形成首版本地 RAG |
 | 论文源 | Java HttpClient、arXiv Atom API、Spring 定时任务、PDFBox 3.0.5 | 主题订阅、摘要入库、文本型 PDF 抽取 |
 | 实验运行 | Java ProcessBuilder、H2 运行记录、指标解析、SVG | 人工确认后执行 Python 脚本，监看日志与数值并导出曲线 |
 | 本地数据 | 嵌入式 H2 文件数据库、工作区目录 | 保存项目、任务、事件和生成文件；不需要单独启动数据库服务 |
 | 构建与验证 | Maven Wrapper、JUnit、Vue 类型检查；可选 Docker Compose + Nginx | 构建、集成测试与本机容器体验 |
 
-**没有进入当前科研主链路：** Spring AI、LangGraph4j、Redis、PgVector/其他向量数据库、MCP、ECharts。当前 RAG 将笔记、arXiv 摘要和 PDF 文本按约 900 字符重叠分块，持久化到 H2 并在项目范围内用 BM25 检索；结果带文档与片段编号，进入 Agent 提示词及工具结果。PDFBox 负责文本型 PDF 抽取；尚无嵌入模型、语义向量或混合排序，不需要外部数据库。旧网站生成、管理员、截图和对象存储模块已从主代码移除。
+**没有进入当前科研主链路：** Spring AI、LangGraph4j、Redis、PgVector/其他向量数据库、ECharts。当前 RAG 将笔记、arXiv 摘要和 PDF 文本按约 900 字符重叠分块，持久化到 H2 并在项目范围内用 BM25 检索；结果带文档与片段编号，进入 Agent 提示词及工具结果。只读 MCP 工具独立暴露同项目的笔记、论文和实验信息。PDFBox 负责文本型 PDF 抽取；尚无嵌入模型、语义向量或混合排序，不需要外部数据库。旧网站生成、管理员、截图和对象存储模块已从主代码移除。
 
 ### 运行架构
 
@@ -182,7 +263,7 @@ flowchart LR
   API --> NOTES[(H2 文献笔记)]
   WORKER[后台 Worker] --> DB
   WORKER --> AGENT[LangChain4j 文件 Agent]
-  AGENT --> MODEL[可配置模型 API]
+  AGENT --> MODEL[Ollama 本地模型或兼容 API]
   AGENT --> FILES
   AGENT --> NOTES
   SCHEDULER[每日 arXiv 同步] --> NOTES

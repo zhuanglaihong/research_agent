@@ -24,6 +24,7 @@ research:
     python-executable: ${RESEARCH_PYTHON_EXECUTABLE:python}
   ai:
     mode: ${RESEARCH_AI_MODE:demo}
+    provider: ${LLM_PROVIDER:openai-compatible}
     api-key: ${LLM_API_KEY:}
     base-url: ${LLM_BASE_URL:https://api.deepseek.com}
     model: ${LLM_MODEL:deepseek-chat}

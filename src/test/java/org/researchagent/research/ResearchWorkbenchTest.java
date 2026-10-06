@@ -54,11 +54,25 @@ class ResearchWorkbenchTest {
     @Autowired WorkspaceService workspaces;
     @Autowired KnowledgeService knowledge;
     @Autowired ProjectMemoryService memory;
+    @Autowired org.researchagent.research.agent.ResearchObservationService observations;
+
+    @Test void taskConversationSurvivesStoreRecreationAndIsIsolated() {
+        var first=new org.researchagent.research.agent.JdbcChatMemoryStore(jdbc);
+        var messages=List.<dev.langchain4j.data.message.ChatMessage>of(
+                dev.langchain4j.data.message.UserMessage.from("对照实验固定随机种子 42"),
+                dev.langchain4j.data.message.AiMessage.from("已经记录实验约束"));
+        first.updateMessages("test:conversation-a",messages);
+        var recreated=new org.researchagent.research.agent.JdbcChatMemoryStore(jdbc);
+        assertThat(recreated.getMessages("test:conversation-a")).isEqualTo(messages);
+        assertThat(recreated.getMessages("test:conversation-b")).isEmpty();
+        recreated.deleteMessages("test:conversation-a");
+        assertThat(first.getMessages("test:conversation-a")).isEmpty();
+    }
 
     @TestConfiguration static class Database {
         @Bean JdbcTemplate jdbcTemplate(DataSource source) throws Exception {
             var jdbc=new JdbcTemplate(source);
-            for (String name:List.of("V1__local_research_schema.sql", "V2__knowledge_documents.sql", "V3__paper_subscriptions.sql", "V4__paper_to_code.sql", "V5__knowledge_chunks.sql")) {
+            for (String name:List.of("V1__local_research_schema.sql", "V2__knowledge_documents.sql", "V3__paper_subscriptions.sql", "V4__paper_to_code.sql", "V5__knowledge_chunks.sql", "V6__agent_chat_memory.sql")) {
                 String sql=new String(new ClassPathResource("db/local/"+name).getInputStream().readAllBytes(),StandardCharsets.UTF_8);
                 try (var connection=source.getConnection()) {
                     org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(connection,
@@ -224,7 +238,7 @@ class ResearchWorkbenchTest {
         });
         server.start();
         try {
-            var engine=new ResearchAgentEngine(workspaces,tasks,memory,knowledge,jdbc,"test-key","http://127.0.0.1:"+server.getAddress().getPort()+"/v1","mock","live");
+            var engine=new ResearchAgentEngine(workspaces,tasks,memory,knowledge,jdbc,observations,"test-key","http://127.0.0.1:"+server.getAddress().getPort()+"/v1","mock","live","openai-compatible");
             engine.execute(tasks.get(id));
             assertThat(tasks.get(id).status()).isEqualTo("SUCCEEDED");
             assertThat(Files.readString(Path.of(tasks.get(id).outputPath()).resolve("main.py"))).contains("print('research')");
