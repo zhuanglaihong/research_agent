@@ -208,7 +208,13 @@ ollama pull qwen3:8b
 
 该模型约 5 GB，下载耗时取决于网络；已经存在时不要重复下载。Ollama 与 LangChain4j 使用兼容接口，模型需支持工具调用；Ollama 官方列出了 Qwen 3 等支持工具的模型。[Ollama 工具调用说明](https://ollama.com/blog/streaming-tool)。
 
+<a id="server"></a>
+
 #### 部署到自己的服务器
+
+Java 后端与 Vue 前端可以在 Linux 服务器运行；原生部署按上面的 Bash 命令启动，科研程序使用服务器上的 Python 环境、依赖与工作目录。仓库提供 Dockerfile、compose.yaml 与 Nginx 代理配置；默认 Compose 网页端口绑定服务器的 127.0.0.1，可通过 SSH 转发或受保护的反向代理访问。没有用户隔离时，不要把该入口当作多用户平台直接开放。
+
+容器版默认打包 Java 工作台运行环境。运行 Python 实验前，还需在后端镜像中安装解释器与实验依赖，向 Compose 后端传入 RESEARCH_RUNNER_ENABLED / RESEARCH_PYTHON_EXECUTABLE，并挂载明确的实验目录；当前 .env 的 Runner 开关没有自动透传至 Compose。H2 与工作区保存在 research-data 卷；部署到服务器后不会自动读取访客电脑文件。
 
 在服务器安装并启动 Ollama，下载一个支持工具调用的聊天模型；把上面五项配置写进服务器上的 `.env`，并将 `LLM_BASE_URL` 改为 **Java 后端所在主机/容器能够访问的 Ollama 地址**。Java 与 Ollama 在同一台非容器主机时可用 `http://127.0.0.1:11434/v1`；Java 在 Docker 容器中时，`127.0.0.1` 指向 Java 容器自身，必须改为容器网络中的 Ollama 服务名或宿主机可达地址。无需开放 Ollama 到公网，只需让后端能访问它。此仓库当前未验证容器化 Ollama 部署。
 

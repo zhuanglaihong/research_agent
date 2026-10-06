@@ -1,5 +1,11 @@
 # 实施状态：个人本地版
 
+## 定位与服务器部署说明（2026-10-06）
+
+副标题改为“让科研想法跑起来，让实验过程看得见”。首页将定位表述为科研编程 Agent，默认个人电脑使用，并说明已有 Docker Compose/Nginx 服务器部署基础。详细教程新增 server 锚点，区分原生服务器启动、容器工作台与容器 Python Runner 的环境配置：当前 Java 镜像不含 Python，Compose 未透传 Runner 配置，默认网页端口绑定回环地址。没有将单用户运行写成已验证的实验室多人平台，也没有声称已完成 Linux/Ollama 容器验收。
+
+本轮只更新文档与能力定位。核对 compose.yaml、Dockerfile、frontend/nginx.conf 与 application.yml；没有修改部署权限、暴露端口或运行服务器。
+
 ## README 首页精简（2026-10-06）
 
 参考 MiroFish 的产品介绍、演示、快速开始顺序，并保留 obsidian-vault 的居中标题、技术徽章、图标标题和表格风格。README 从 346 行压缩到 147 行，保留五项功能、Demo 截图、Windows/macOS/Linux 启动入口、Ollama/API 配置、Python Runner 使用边界与技术栈。原完整教程迁移到 docs/user-guide.md，修正相对文档/案例链接，保留系统安装、每日论文、指标格式、MCP、Docker 与排障说明；移除开发机的个人模型清单。
