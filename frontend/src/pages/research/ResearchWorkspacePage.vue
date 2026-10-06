@@ -95,7 +95,7 @@
           </div>
           <a-tabs v-model:active-key="activeTab">
             <a-tab-pane key="progress" tab="执行进度">
-              <ul class="event-list"><li v-for="event in events" :key="event.id"><time>{{ new Date(event.timestamp).toLocaleTimeString() }}</time><span>{{ eventText(event) }}</span></li></ul>
+              <ul class="event-list"><li v-for="event in events" :key="event.id"><time>{{ new Date(event.timestamp).toLocaleTimeString() }}</time><div class="event-content"><span>{{ eventText(event) }}</span><details v-if="event.type === 'TOOL' || event.type === 'RETRIEVAL'" class="event-details"><summary>{{ event.type === 'TOOL' ? '查看工具调用记录' : '查看检索记录' }}</summary><pre>{{ eventDetails(event) }}</pre><small v-if="event.type === 'TOOL'">显示任务事件中保存的调用元数据。</small></details></div></li></ul>
               <a-empty v-if="events.length === 0" description="尚无进度事件" />
             </a-tab-pane>
             <a-tab-pane key="result" tab="助手总结"><MarkdownRenderer v-if="selected.resultText" :content="selected.resultText" /><a-empty v-else description="任务完成后展示总结" /></a-tab-pane>
@@ -177,6 +177,10 @@ const eventText = (event: TaskEvent) => {
     if (value.name) return `${value.name}${value.path ? ` · ${value.path}` : ''}${value.count !== undefined ? ` · ${value.count} 个文件` : ''}`
     return value.message || statusLabel(value.status || event.type)
   } catch { return event.payload }
+}
+const eventDetails = (event: TaskEvent) => {
+  try { return JSON.stringify(JSON.parse(event.payload), null, 2) }
+  catch { return event.payload }
 }
 const loadTasks = async () => {
   const response = await listTasks(projectId)
@@ -425,6 +429,12 @@ onUnmounted(() => stream?.close())
 .event-list { list-style:none; padding:0; }
 .event-list li { display:flex; gap:16px; padding:12px 0; border-bottom:1px solid #f0f0f0; }
 .event-list time { color:#98a2b3; min-width:85px; }
+.event-content { min-width:0; flex:1; overflow-wrap:anywhere; }
+.event-details { margin-top:8px; color:#475467; }
+.event-details summary { cursor:pointer; font-size:12px; color:#315e9e; }
+.event-details pre { max-height:220px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; background:#f8fafc; border-radius:6px; padding:10px; font-size:12px; }
+.event-details small { color:#98a2b3; }
+@media(max-width:600px) { .event-list li { gap:8px; } .event-list time { min-width:65px; } }
 .files-panel { display:grid; grid-template-columns:200px minmax(0,1fr); gap:16px; }
 .files-panel nav button { display:block; width:100%; text-align:left; padding:10px; border:1px solid #eee; background:white; cursor:pointer; overflow:hidden; text-overflow:ellipsis; }
 .files-panel pre { margin:0; max-height:600px; overflow:auto; background:#f8fafc; padding:16px; border-radius:8px; }
