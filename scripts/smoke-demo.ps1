@@ -63,8 +63,13 @@ try {
         }
         $runStatus = $run.data.status
         $runLogs = Invoke-RestMethod "$base/runs/$runId/logs"
+        $runMetrics = Invoke-RestMethod "$base/runs/$runId/metrics"
+        $plot = Invoke-WebRequest "$base/runs/$runId/plot?metric=loss" -UseBasicParsing
         if ($runStatus -ne 'SUCCEEDED' -or $runLogs.data.stdout -notmatch 'Demo metrics written') {
             throw "Runner smoke failed. Status: $runStatus; stderr: $($runLogs.data.stderr)"
+        }
+        if (@($runMetrics.data.series).Count -lt 1 -or $plot.Content -notmatch '<svg') {
+            throw 'Runner metrics or SVG plot smoke failed.'
         }
     }
     [pscustomobject]@{

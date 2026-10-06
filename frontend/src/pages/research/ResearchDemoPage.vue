@@ -3,8 +3,8 @@
     <section class="intro">
       <div>
         <p class="eyebrow">INTERACTIVE DEMO · NO BACKEND REQUIRED</p>
-        <h1>从文献笔记到可检查的代码任务</h1>
-        <p>用一个固定案例体验 research_agent 的项目记忆、资料检索、人工确认、任务进度和代码产物。</p>
+        <h1>从论文方法到代码与实验结果</h1>
+        <p>用一个固定案例体验 research_agent 的论文导入、知识检索、人工确认、代码产物和实验指标。</p>
         <a-alert type="warning" show-icon message="公开演示使用固定样例：不调用大模型、不执行训练，也不会读取或保存你的文件。" />
       </div>
       <div class="intro-action">
@@ -27,6 +27,11 @@
           <a-tag color="blue">Early stopping 方法笔记</a-tag>
           <p>监控验证集 loss；若连续若干轮没有改善，停止训练并恢复最佳权重。</p>
           <small>本地模式可添加来源与正文，并按任务检索相关片段。</small>
+        </a-card>
+        <a-card title="论文方法 · 固定样例" :bordered="false">
+          <a-tag color="purple">PDF 方法片段</a-tag>
+          <p>使用独立验证集监控损失；训练脚本需要记录随机种子、每轮指标与早停条件。</p>
+          <small>本地模式可上传文本型 PDF，审阅抽取片段后创建待确认的代码任务。</small>
         </a-card>
       </section>
 
@@ -59,6 +64,18 @@
             </a-tab-pane>
           </a-tabs>
         </a-card>
+        <a-card v-if="phase === 'done'" title="实验助手 · 固定样例" :bordered="false" class="experiment-demo">
+          <p>本地模式可人工确认运行 Python 脚本，实时查看日志和指标，并下载 SVG 曲线。</p>
+          <a-button type="primary" @click="showMetrics = true">查看示例训练指标</a-button>
+          <div v-if="showMetrics" class="sample-metrics">
+            <strong>loss：1.0000 → 0.2500 · 观测最优 0.2500</strong>
+            <svg viewBox="0 0 500 200" role="img" aria-label="固定样例 loss 曲线">
+              <path d="M45 20 V165 H470" fill="none" stroke="#94a3b8" />
+              <polyline points="45,30 145,80 245,116 345,140 445,158" fill="none" stroke="#2563eb" stroke-width="4" />
+            </svg>
+            <small>这组数值仅用于界面演示，没有实际训练，也不能作为论文结果。</small>
+          </div>
+        </a-card>
       </section>
     </div>
     <p class="local-link">想让 Agent 处理自己的科研项目？下载仓库并按 README 启动 Java 后端与 Vue 前端。静态演示不会连接本机 API。</p>
@@ -73,6 +90,7 @@ const phase = ref<Phase>('ready')
 const visibleCount = ref(0)
 const activeTab = ref('events')
 const selectedFile = ref('train.py')
+const showMetrics = ref(false)
 const timers: ReturnType<typeof setTimeout>[] = []
 const events = [
   '任务已排队，等待后台 Worker 领取',
@@ -124,6 +142,7 @@ const resetDemo = () => {
   visibleCount.value = 0
   activeTab.value = 'events'
   selectedFile.value = 'train.py'
+  showMetrics.value = false
 }
 onUnmounted(clearTimers)
 </script>
@@ -151,5 +170,9 @@ h1 { color:#172033; font-size:34px; margin:8px 0 12px; }
 .file-switch { margin:8px 0 16px; }
 pre { background:#f8fafc; padding:16px; overflow:auto; max-height:440px; }
 .local-link { margin-top:24px; color:#667085; }
+.experiment-demo { margin-top:20px; }
+.sample-metrics { display:flex; flex-direction:column; gap:12px; margin-top:18px; }
+.sample-metrics svg { width:100%; max-width:500px; background:#f8fafc; }
+.sample-metrics small { color:#667085; }
 @media(max-width:850px) { .intro { flex-direction:column; } .intro-action { padding:0; } .demo-grid { grid-template-columns:1fr; } }
 </style>

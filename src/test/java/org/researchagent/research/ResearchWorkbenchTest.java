@@ -99,6 +99,18 @@ class ResearchWorkbenchTest {
         assertThat(body(mvc.perform(get("/tasks/"+id+"/events"))).path("data").toString()).contains("TOOL","DONE");
         byte[] zip=mvc.perform(get("/tasks/"+id+"/download")).andReturn().getResponse().getContentAsByteArray();
         try(var archive=new ZipInputStream(new ByteArrayInputStream(zip))) { assertThat(archive.getNextEntry()).isNotNull(); }
+        Path output = Path.of(tasks.get(Long.parseLong(id)).outputPath());
+        jdbc.update("insert into experiment_run(task_id,run_key,runtime_language,working_directory,command_json,status,started_at) values(?,?,?,?,?,'SUCCEEDED',current_timestamp)",
+                Long.parseLong(id), UUID.randomUUID().toString(), "python", output.toString(), "main.py");
+        long runId = jdbc.queryForObject("select max(id) from experiment_run where task_id=?", Long.class, Long.parseLong(id));
+        Files.writeString(output.resolve("metrics.jsonl"),
+                "{\"step\":0,\"loss\":1.0}\n{\"step\":1,\"loss\":0.5}\n{\"step\":2,\"loss\":0.25}\n");
+        var report = body(mvc.perform(get("/runs/"+runId+"/metrics"))).path("data");
+        assertThat(report.path("series").get(0).path("name").asText()).isEqualTo("loss");
+        assertThat(report.path("series").get(0).path("last").asDouble()).isEqualTo(0.25);
+        String plot = mvc.perform(get("/runs/"+runId+"/plot").param("metric", "loss")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(plot).contains("<svg", "<polyline");
     }
     @Test void cancellationAndPathEscapeAreEnforced() throws Exception {
         String project=project("go"),id=task(project);

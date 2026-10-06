@@ -41,7 +41,7 @@
 | 科研知识库 RAG | 保存笔记、arXiv 摘要和 PDF 文本；项目内分块 BM25 检索，显示来源与片段编号，可删除资料 | 本地关键词相关性，不是向量语义检索 |
 | 每日论文 | 设置英文研究主题，手动或每天 08:00 从 arXiv 拉取最新元数据与原始摘要，去重并加入项目检索 | 不下载 PDF；尚未自动提炼创新点或评价论文质量 |
 | 论文到代码入口 | 上传文本型 PDF，抽取并审阅方法原文片段，创建带来源、语言与复现交付要求的待确认任务；arXiv 摘要也可草拟任务 | 演示模式只生成固定样例；真实论文复现需模型、人工核对与实验验证 |
-| 本地实验运行 | 可选开启 Python Runner；选生成脚本、确认命令后后台执行，查看状态与日志，并草拟分析任务 | 默认关闭；5 分钟/1 MB 限制；无容器/系统沙箱，尚未自动调参 |
+| 实验助手 | 可选开启 Python Runner；人工确认后运行脚本，查看状态、日志、数值指标和 SVG 曲线，基于实际记录草拟分析任务 | 默认关闭；5 分钟/1 MB 日志限制；无系统沙箱，不会自主改参或重启实验 |
 | 成果 | 浏览生成文件、下载 ZIP | 每项任务使用独立产物目录 |
 
 **当前不需要账号。** 本机用户打开界面即可使用。数据保存在本机文件；`user_id=1` 是兼容旧数据库结构的内部值，不表示有用户系统。服务只应监听本机，不能把无认证的工作区接口直接暴露到公网。
@@ -57,6 +57,8 @@
 ### 可选：本机运行生成的 Python 脚本
 
 安装 Python 并确认 `python --version` 后，在 `.env` 设置 `RESEARCH_RUNNER_ENABLED=true`，重启后端。在任务产物中检查脚本，然后点击“准备实验运行”，核对命令与工作目录，确认后才会启动进程。可用 `RESEARCH_PYTHON_EXECUTABLE` 指定 Python 解释器。Runner 不通过 shell 拼接命令，限制单次运行 5 分钟、日志总量 1 MB；它仍不是安全沙箱，勿运行不可信代码。其他语言的生成不受影响，但当前 Runner 只支持 Python。
+
+脚本可在任务产物目录写 `metrics.jsonl`（每行如 `{"step":1,"loss":0.5,"accuracy":0.8}`）或 `metrics.csv`（首行 `step,loss,accuracy`）。实验助手每秒读取本次运行的数值，最多取 1 MB、1000 行和 8 个指标；网页显示起始值、最新值、观测最优值，并可下载独立 SVG 曲线。统计摘要只描述已有数据，不判断模型是否真正优于基线。可以将摘要与日志草拟为下一项分析任务，仍需人工确认。
 
 ### 可选：每日论文
 
@@ -156,7 +158,7 @@ LLM_MODEL=deepseek-chat
 | Agent | LangChain4j、Prompt、AiServices、文件 Tool Calling | 在限定工作区读取上下文、写入任务成果 |
 | 项目知识 | 工作区 Markdown 记忆、H2 文档与分块、BM25 | 按任务找相关片段并附来源，形成首版本地 RAG |
 | 论文源 | Java HttpClient、arXiv Atom API、Spring 定时任务、PDFBox 3.0.5 | 主题订阅、摘要入库、文本型 PDF 抽取 |
-| 实验运行 | Java ProcessBuilder、H2 运行记录、轮询日志 | 人工确认后执行 Python 脚本，超时/取消/日志限制 |
+| 实验运行 | Java ProcessBuilder、H2 运行记录、指标解析、SVG | 人工确认后执行 Python 脚本，监看日志与数值并导出曲线 |
 | 本地数据 | 嵌入式 H2 文件数据库、工作区目录 | 保存项目、任务、事件和生成文件；不需要单独启动数据库服务 |
 | 构建与验证 | Maven Wrapper、JUnit、Vue 类型检查；可选 Docker Compose + Nginx | 构建、集成测试与本机容器体验 |
 
@@ -223,11 +225,11 @@ Docker 中的工作区位于容器数据卷内，不能自动读取宿主机任�
 
 ## 🌐 在线演示
 
-**在线演示链接：待上线。** 当前无公网演示地址，不把 `localhost` 当成在线地址。
+**在线演示链接：待 GitHub Pages 启用后验证。** 预期地址为 `https://zhuanglaihong.github.io/research_agent/`；当前不能把它当作已上线链接。
 
-仓库已准备 `/#/demo` 静态交互演示：访问者可依次点击“创建示例任务→确认并生成样例→查看检索事件与代码预览”。所有内容都是预置的，不连接 Java 后端、模型或用户文件。与本地完整工作台的区别在页面顶部明确标注。
+仓库已准备 `/#/demo` 静态交互演示：访问者可依次点击“创建示例任务→确认并生成样例→查看检索事件与代码预览→查看固定实验曲线”。所有内容都是预置的，不连接 Java 后端、模型或用户文件。与本地完整工作台的区别在页面顶部明确标注。
 
-推送到 GitHub 且核对源码授权后，在仓库 **Settings → Pages → Source** 选 **GitHub Actions**，再在 **Actions** 手动运行 `Publish static research_agent demo`。工作流会以 `/${repo-name}/` 为资源前缀构建 `frontend/dist`，并输出 Pages URL；把实际 URL 填回本节。此工作流不会在每次 push 后自动公开部署。若仓库名与 `research_agent` 不同，工作流仍按实际仓库名生成路径。该设计依据 [GitHub Pages 自定义工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
+推送到 GitHub 且核对源码授权后，仓库所有者在 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。然后在 **Actions** 打开 `Publish static research_agent demo`，点击 **Run workflow → main → Run workflow**。等待 build/deploy 两个 job 成功，再打开上面的预期地址，确认“创建示例任务→确认→查看固定指标”按钮可用。工作流以 `/${repo-name}/` 为资源前缀构建 `frontend/dist`；不会在每次 push 后自动公开部署。部署成功后把实测 URL 填回本节。依据：[GitHub Pages 自定义工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
 
 个人版本没有登录，且 API 能读取配置的工作区。因此**不能把当前无认证后端直接暴露到互联网**。以后上线在线演示时，应部署独立的演示数据目录、限制可执行能力与 API 访问，并给每位访客提供隔离空间，或只开放只读演示。完成隔离和部署验证后，在这里填写真实 HTTPS 链接、演示模式及数据保留说明。
 
@@ -243,7 +245,7 @@ Docker 中的工作区位于容器数据卷内，不能自动读取宿主机任�
 bash mvnw -B -ntp verify
 ```
 
-前端在 `frontend/` 运行 `npm run build`。当前本机验证：后端 5 项集成测试通过，前端类型检查及构建通过；独立进程烟测通过 H2 v1–v3 迁移、记忆、笔记检索、审批、`RETRIEVAL` 事件、Python Runner 和同步到 5 篇 arXiv 论文。静态演示的按钮流程已在本机浏览器实际检查。真实模型效果、Docker、GitHub Pages 工作流和跨系统实机尚未验证。
+前端在 `frontend/` 运行 `npm run build`。当前本机验证：后端 7 项集成测试通过，前端类型检查及构建通过；独立进程烟测通过 H2 v1–v5 迁移、记忆、分块检索、审批与代码产物；此前 Python Runner 和 arXiv 同步通过烟测。指标 API 与 SVG 输出有集成测试。真实模型效果、Docker、GitHub Pages 工作流和跨系统实机尚未验证。
 
 | 情况 | 处理 |
 | --- | --- |

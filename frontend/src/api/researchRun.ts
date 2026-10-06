@@ -9,3 +9,6 @@ export const listRuns = (taskId: string) => request<Response<ResearchRun[]>>(`/t
 export const approveRun = (id: string) => request<Response<ResearchRun>>(`/runs/${id}/approve`, { method: 'POST' })
 export const cancelRun = (id: string) => request<Response<ResearchRun>>(`/runs/${id}/cancel`, { method: 'POST' })
 export const getRunLogs = (id: string) => request<Response<{stdout: string; stderr: string}>>(`/runs/${id}/logs`)
+export type MetricSeries = { name: string; points: { step: number; value: number }[]; first: number; last: number; best: number; delta: number }
+export type MetricReport = { status: string; source: string; series: MetricSeries[]; summary: string }
+export const getRunMetrics = (id: string) => request<Response<MetricReport>>('/runs/' + id + '/metrics')

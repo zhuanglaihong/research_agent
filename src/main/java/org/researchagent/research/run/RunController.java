@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,7 +20,8 @@ import java.util.Map;
 public class RunController {
     public record CreateRun(String scriptPath) { }
     private final RunService runs;
-    public RunController(RunService runs) { this.runs = runs; }
+    private final ExperimentMetricsService metrics;
+    public RunController(RunService runs, ExperimentMetricsService metrics) { this.runs = runs; this.metrics = metrics; }
 
     @GetMapping("/research/runs/capabilities")
     public BaseResponse<Map<String, Object>> capabilities() {
@@ -41,4 +44,13 @@ public class RunController {
     public BaseResponse<RunView> cancel(@PathVariable long id) { return ResultUtils.success(runs.cancel(id)); }
     @GetMapping("/runs/{id}/logs")
     public BaseResponse<Map<String, String>> logs(@PathVariable long id) throws IOException { return ResultUtils.success(runs.logs(id)); }
+    @GetMapping("/runs/{id}/metrics")
+    public BaseResponse<ExperimentMetricsService.Report> metrics(@PathVariable long id) throws IOException {
+        return ResultUtils.success(metrics.report(id));
+    }
+    @GetMapping(value="/runs/{id}/plot", produces="image/svg+xml")
+    public ResponseEntity<String> plot(@PathVariable long id, @org.springframework.web.bind.annotation.RequestParam String metric) throws IOException {
+        return ResponseEntity.ok().header("Cache-Control", "no-store")
+                .contentType(MediaType.parseMediaType("image/svg+xml")).body(metrics.svg(id, metric));
+    }
 }
