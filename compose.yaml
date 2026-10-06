@@ -7,6 +7,7 @@ services:
       SERVER_ADDRESS: 0.0.0.0
       RESEARCH_WORKSPACE_ROOT: /app/data/workspaces
       RESEARCH_AI_MODE: ${RESEARCH_AI_MODE:-demo}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai-compatible}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
       LLM_MODEL: ${LLM_MODEL:-deepseek-chat}

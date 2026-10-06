@@ -26,6 +26,7 @@ public class TaskWorker {
                 try { engine.execute(tasks.get(task.id())); }
                 catch (Exception e) {
                     log.warn("Research task {} failed: {}",task.id(),e.getClass().getSimpleName());
+                    log.debug("Research task {} failure details",task.id(),e);
                     String reason=e instanceof IllegalStateException?e.getMessage():"科研任务失败，请检查模型服务、项目文件和后台日志";
                     tasks.fail(task.id(),reason);
                 } finally { slots.release(); }

@@ -23,6 +23,8 @@
 
 ### 本轮验收结果（2026-10-06）
 
+最新：完成真实Ollama生成→审批实验→指标/日志→inspectExperiment→分析和下一步草拟；最终本地Maven verify及9项测试通过，MCP隔离已验收，任务/消息经服务重启保留。详情见 docs/chain-validation.md。模型报告仍需人工核对，包含一次未定位失败；此结论仅针对本地MVP。
+
 live 模型同时支持 `LLM_PROVIDER=ollama` 与 `openai-compatible`。本机 Ollama `qwen3:8b` 已完成读取项目文件、写入隔离代码产物的 Agent 工具调用；无 API Key。README 与在线静态 Demo 已展示两种配置。GitHub Actions `37445474741` 的 Maven `verify` / 前端构建与 Pages 部署 `37445474843` 均成功。完整状态见 `docs/implementation-status.md`。
 
 完整目标是理解任务、检索知识、调用工具、生成代码、执行实验、观察结果并继续行动的科研 Agent，代码生成 MVP 不是最终验收。

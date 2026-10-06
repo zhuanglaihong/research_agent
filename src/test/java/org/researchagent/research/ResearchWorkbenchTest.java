@@ -69,6 +69,40 @@ class ResearchWorkbenchTest {
         assertThat(first.getMessages("test:conversation-a")).isEmpty();
     }
 
+    @Test void mcpAndAgentObservationKeepExperimentsWithinTheirProject() throws Exception {
+        long first=Long.parseLong(project("python")), second=Long.parseLong(project("python"));
+        long task=tasks.create(first,1,"observation fixture","demo");
+        Path projectRoot=Path.of(jdbc.queryForObject("select workspace_path from research_project where id=?",String.class,first));
+        Path output=workspaces.resolve(projectRoot,".research_agent/tasks/"+task);
+        Files.createDirectories(output);
+        Files.writeString(output.resolve("metrics.jsonl"),"{\"step\":0,\"loss\":4.0}\n{\"step\":1,\"loss\":1.0}\n");
+        tasks.succeed(task,"fixture",output.toString());
+        jdbc.update("insert into experiment_run(task_id,run_key,runtime_language,working_directory,command_json,status,started_at) values(?,?,?,?,?,'SUCCEEDED',current_timestamp)",
+                task,UUID.randomUUID().toString(),"python",output.toString(),"train.py");
+        long run=jdbc.queryForObject("select max(id) from experiment_run where task_id=?",Long.class,task);
+        assertThat(json.valueToTree(observations.result(first,run)).toString()).contains("loss","4.0","1.0");
+        assertThatThrownBy(()->observations.result(second,run)).isInstanceOf(IllegalArgumentException.class);
+
+        String endpoint="/mcp/projects/"+first;
+        var initialized=body(mvc.perform(post(endpoint).contentType("application/json")
+                .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}")));
+        assertThat(initialized.path("result").path("protocolVersion").asText()).isEqualTo("2025-03-26");
+        var listed=body(mvc.perform(post(endpoint).contentType("application/json").header("MCP-Protocol-Version","2025-03-26")
+                .content("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}")));
+        assertThat(listed.path("result").path("tools").size()).isEqualTo(4);
+        String call="{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"inspect_experiment\",\"arguments\":{\"runId\":"+run+"}}}";
+        var inspected=body(mvc.perform(post(endpoint).contentType("application/json").header("MCP-Protocol-Version","2025-03-26").content(call)));
+        assertThat(inspected.path("result").path("isError").asBoolean()).isFalse();
+        assertThat(inspected.path("result").path("content").toString()).contains("loss");
+        var denied=body(mvc.perform(post("/mcp/projects/"+second).contentType("application/json")
+                .header("MCP-Protocol-Version","2025-03-26").content(call)));
+        assertThat(denied.path("result").path("isError").asBoolean()).isTrue();
+        assertThat(denied.toString()).doesNotContain("4.0");
+        mvc.perform(post(endpoint).contentType("application/json").header("Origin","https://untrusted.example").content(call))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(endpoint).contentType("application/json").content(call)).andExpect(status().isBadRequest());
+    }
+
     @TestConfiguration static class Database {
         @Bean JdbcTemplate jdbcTemplate(DataSource source) throws Exception {
             var jdbc=new JdbcTemplate(source);

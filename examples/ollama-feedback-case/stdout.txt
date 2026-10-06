@@ -1,0 +1,3 @@
+Initial loss: 4.0
+Final loss: 0.04611686018427385
+

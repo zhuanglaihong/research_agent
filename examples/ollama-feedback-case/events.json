@@ -1,0 +1,181 @@
+[
+  {
+    "taskId": "1",
+    "status": "SUCCEEDED",
+    "events": [
+      {
+        "type": "STATE",
+        "payload": "{\"message\":\"任务计划已就绪，请确认开始\",\"status\":\"WAITING_APPROVAL\"}",
+        "timestamp": "2026-10-06T19:50:33.614393"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"QUEUED\"}",
+        "timestamp": "2026-10-06T19:50:33.625063"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"RUNNING\"}",
+        "timestamp": "2026-10-06T19:50:33.766922"
+      },
+      {
+        "type": "RETRIEVAL",
+        "payload": "{\"count\":1,\"sources\":[\"validation-method\"]}",
+        "timestamp": "2026-10-06T19:50:33.774955"
+      },
+      {
+        "type": "NOTICE",
+        "payload": "{\"message\":\"科研 Agent 开始分析项目并生成代码\",\"model\":\"qwen3:8b\",\"provider\":\"ollama\"}",
+        "timestamp": "2026-10-06T19:50:33.800626"
+      },
+      {
+        "type": "TOOL",
+        "payload": "{\"path\":\"artifacts/train.py\",\"characters\":639,\"name\":\"writeArtifact\"}",
+        "timestamp": "2026-10-06T19:50:58.954414"
+      },
+      {
+        "type": "TOOL",
+        "payload": "{\"path\":\"artifacts/README.md\",\"characters\":590,\"name\":\"writeArtifact\"}",
+        "timestamp": "2026-10-06T19:50:58.961611"
+      },
+      {
+        "type": "DONE",
+        "payload": "{\"message\":\"代码生成完成\",\"status\":\"SUCCEEDED\"}",
+        "timestamp": "2026-10-06T19:51:08.984653"
+      }
+    ]
+  },
+  {
+    "taskId": "2",
+    "status": "SUCCEEDED",
+    "events": [
+      {
+        "type": "STATE",
+        "payload": "{\"message\":\"任务计划已就绪，请确认开始\",\"status\":\"WAITING_APPROVAL\"}",
+        "timestamp": "2026-10-06T19:51:36.645072"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"QUEUED\"}",
+        "timestamp": "2026-10-06T19:51:36.651557"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"RUNNING\"}",
+        "timestamp": "2026-10-06T19:51:36.832142"
+      },
+      {
+        "type": "RETRIEVAL",
+        "payload": "{\"count\":1,\"sources\":[\"validation-method\"]}",
+        "timestamp": "2026-10-06T19:51:36.83464"
+      },
+      {
+        "type": "NOTICE",
+        "payload": "{\"message\":\"科研 Agent 开始分析项目并生成代码\",\"model\":\"qwen3:8b\",\"provider\":\"ollama\"}",
+        "timestamp": "2026-10-06T19:51:36.837642"
+      },
+      {
+        "type": "TOOL",
+        "payload": "{\"name\":\"inspectExperiment\"}",
+        "timestamp": "2026-10-06T19:51:41.863442"
+      },
+      {
+        "type": "TOOL",
+        "payload": "{\"path\":\"analysis.md\",\"characters\":355,\"name\":\"writeArtifact\"}",
+        "timestamp": "2026-10-06T19:51:50.863712"
+      },
+      {
+        "type": "DONE",
+        "payload": "{\"message\":\"代码生成完成\",\"status\":\"SUCCEEDED\"}",
+        "timestamp": "2026-10-06T19:52:01.664934"
+      }
+    ]
+  },
+  {
+    "taskId": "33",
+    "status": "FAILED",
+    "events": [
+      {
+        "type": "STATE",
+        "payload": "{\"message\":\"任务计划已就绪，请确认开始\",\"status\":\"WAITING_APPROVAL\"}",
+        "timestamp": "2026-10-06T19:53:36.395962"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"QUEUED\"}",
+        "timestamp": "2026-10-06T19:53:36.404366"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"RUNNING\"}",
+        "timestamp": "2026-10-06T19:53:36.514062"
+      },
+      {
+        "type": "RETRIEVAL",
+        "payload": "{\"sources\":[\"validation-method\"],\"count\":1}",
+        "timestamp": "2026-10-06T19:53:36.521375"
+      },
+      {
+        "type": "NOTICE",
+        "payload": "{\"message\":\"科研 Agent 开始分析项目并生成代码\",\"provider\":\"ollama\",\"model\":\"qwen3:8b\"}",
+        "timestamp": "2026-10-06T19:53:36.554007"
+      },
+      {
+        "type": "TOOL",
+        "payload": "{\"name\":\"inspectExperiment\"}",
+        "timestamp": "2026-10-06T19:53:41.090596"
+      },
+      {
+        "type": "FAILED",
+        "payload": "{\"message\":\"科研任务失败，请检查模型服务、项目文件和后台日志\",\"status\":\"FAILED\"}",
+        "timestamp": "2026-10-06T19:53:54.706682"
+      }
+    ]
+  },
+  {
+    "taskId": "65",
+    "status": "SUCCEEDED",
+    "events": [
+      {
+        "type": "STATE",
+        "payload": "{\"message\":\"任务计划已就绪，请确认开始\",\"status\":\"WAITING_APPROVAL\"}",
+        "timestamp": "2026-10-06T19:55:02.387023"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"QUEUED\"}",
+        "timestamp": "2026-10-06T19:55:02.448842"
+      },
+      {
+        "type": "STATE",
+        "payload": "{\"status\":\"RUNNING\"}",
+        "timestamp": "2026-10-06T19:55:02.643524"
+      },
+      {
+        "type": "RETRIEVAL",
+        "payload": "{\"sources\":[\"validation-method\"],\"count\":1}",
+        "timestamp": "2026-10-06T19:55:02.65276"
+      },
+      {
+        "type": "NOTICE",
+        "payload": "{\"provider\":\"ollama\",\"model\":\"qwen3:8b\",\"message\":\"科研 Agent 开始分析项目并生成代码\"}",
+        "timestamp": "2026-10-06T19:55:02.696114"
+      },
+      {
+        "type": "TOOL",
+        "payload": "{\"name\":\"inspectExperiment\"}",
+        "timestamp": "2026-10-06T19:55:13.08163"
+      },
+      {
+        "type": "TOOL",
+        "payload": "{\"characters\":644,\"path\":\"artifacts/analysis.md\",\"name\":\"writeArtifact\"}",
+        "timestamp": "2026-10-06T19:55:24.51912"
+      },
+      {
+        "type": "DONE",
+        "payload": "{\"message\":\"代码生成完成\",\"status\":\"SUCCEEDED\"}",
+        "timestamp": "2026-10-06T19:55:33.865391"
+      }
+    ]
+  }
+]

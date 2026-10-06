@@ -2,6 +2,8 @@
 
 项目名：`research_agent` — 本地科研编程 Agent 工作台。
 
+最新验收：Ollama qwen3:8b实际生成标准库实验脚本，人工审批后由Java Runner执行，Agent调用inspectExperiment读取真实日志/指标并草拟下一步对照实验；9项当前版本测试及Maven构建通过。可写“实跑贯通本地科研实验辅助闭环”，不把玩具实验的loss下降写成模型性能提升，也不写自动调参或论文复现成功。详见 docs/chain-validation.md。
+
 - 基于 Java 21、Spring Boot 3.5、LangChain4j 和 Vue 3 实现本地科研编程工作台；支持自然语言任务、人工审批、文件 Tool Calling 与代码产物查看/下载。
 - 设计 H2 持久化任务、事件与文献笔记，使用后台 Worker + SSE 展示任务阶段；关闭网页后任务继续，重启时标记中断。
 - 实现每项目 Markdown 文件记忆与带来源的本地词项检索，将相关笔记片段注入 Agent 上下文，并在前端展示检索事件。
@@ -11,4 +13,4 @@
 
 另已在 Windows 本机以 Ollama `qwen3:8b` 完成 live Agent 验证：实际调用 `listProjectFiles` 和 `writeArtifact` 两个工具，产物写入隔离任务目录，任务状态 `SUCCEEDED`。无需 API Key；`LLM_PROVIDER=ollama` 与 OpenAI 兼容 API 可通过 `.env` 切换。GitHub Actions Maven `verify`、前端构建和最新 Pages 发布均通过（`38795d6`）。
 
-可写：Java/Spring Boot/LangChain4j Agent Tool Calling、Ollama 本地模型实跑、带来源的本地 BM25 RAG、H2 持久任务消息和 SSE、人工审批的 Python Runner 与实验结果观察、只读 MCP 工具端点。不可写：PgVector/语义向量、多用户生产权限、论文方法复现成功、自动改代码/调参/重跑或执行沙箱。新 Agent 观察工具与 MCP 尚未通过完整集成回归测试，应按源码实现和 MCP 冒烟的证据范围表述。Pages commit `38795d6` 已部署成功。
+可写：Java/Spring Boot/LangChain4j Agent Tool Calling、Ollama 本地模型实跑、带来源的本地 BM25 RAG、H2 持久任务消息和 SSE、人工审批的 Python Runner 与实验结果观察、只读 MCP 工具端点。不可写：PgVector/语义向量、多用户生产权限、论文方法复现成功、自动改代码/调参/重跑或执行沙箱。新增隔离/协议测试与真实闭环验收已完成；自然语言质量与稳定性仍需评测。Pages commit `38795d6` 已部署成功。
