@@ -173,6 +173,12 @@ public class RunService {
             if (!systemRoot.isBlank()) environment.put("SystemRoot", systemRoot);
             if (!temp.isBlank()) environment.put("TEMP", temp);
             environment.put("PYTHONNOUSERSITE", "1");
+            Path config = workspaces.resolve(directory, "config");
+            Files.createDirectories(config);
+            environment.put("MPLCONFIGDIR", config.toString());
+            environment.put("USERPROFILE", config.toString());
+            environment.put("HOME", config.toString());
+            environment.put("PYTHONUNBUFFERED", "1");
             process = builder.start();
             processes.put(run.id(), process);
             process.getOutputStream().close();

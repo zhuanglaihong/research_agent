@@ -5,7 +5,7 @@
         <p class="eyebrow">INTERACTIVE DEMO · NO BACKEND REQUIRED</p>
         <h1>从论文方法到代码与实验结果</h1>
         <p>用一个固定案例体验 research_agent 的论文导入、知识检索、人工确认、代码产物和实验指标。</p>
-        <a-alert type="warning" show-icon message="公开演示使用固定样例：不调用大模型、不执行训练，也不会读取或保存你的文件。" />
+        <a-alert type="warning" show-icon message="上方交互为固定样例，下方真实案例为本机训练结果快照；网页不调用大模型、不执行训练、不读取你的文件。" />
       </div>
       <div class="intro-action">
         <a-button v-if="phase === 'ready'" type="primary" size="large" @click="createTask">创建示例任务</a-button>
@@ -78,12 +78,14 @@
         </a-card>
       </section>
     </div>
+    <RealExperimentCase />
     <p class="local-link">想让 Agent 处理自己的科研项目？下载仓库并按 README 启动 Java 后端与 Vue 前端。静态演示不会连接本机 API。</p>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
+import RealExperimentCase from '@/components/RealExperimentCase.vue'
 
 type Phase = 'ready' | 'approval' | 'running' | 'done'
 const phase = ref<Phase>('ready')

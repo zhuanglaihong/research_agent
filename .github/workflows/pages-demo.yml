@@ -2,6 +2,15 @@ name: Publish static research_agent demo
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/pages-demo.yml'
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
 
 permissions:
   contents: read

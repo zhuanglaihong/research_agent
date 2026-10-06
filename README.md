@@ -64,6 +64,12 @@
 
 在项目工作台“每日论文”中填写英文主题并保存；可立即同步，也可打开每日 08:00 自动同步。自动同步只拉取 arXiv Atom 元数据、标题、链接和原始摘要，新论文自动加入项目笔记检索。也可手动上传文本型 PDF（10 MB、100 页以内），查看抽取的方法原文片段，再创建待确认的代码任务。扫描件需先 OCR；公式、图表和方法解释仍需人工核对。每次同步最多抓取 5 篇，并在连续请求间至少等待 3 秒。
 
+### 真实实验案例
+
+[Digits 分类基线](examples/digits-baseline/README.md) 可在 CPU 上实际训练，不需要模型密钥。三随机种子、固定训练/验证/测试划分、验证损失早停，输出 JSONL 指标、统计结果、SVG 曲线与混淆矩阵。当前实测测试准确率均值 96.39%，同一数据划分上样本标准差为 0；仅代表这个基线与划分。脚本人工编写，未验证 LLM 自动生成能力。在线 Demo 展示实测结果快照，运行环境和脚本 SHA256 可核对。Java Runner 真实运行该案例的烟测已通过。
+
+真实模型任务还需配置 `RESEARCH_AI_MODE=live`、`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`，所选模型应支持工具调用；论文 PDF、数据和科研约束由用户提供。运行 Python 代码前需手动安装其依赖，并让 `RESEARCH_PYTHON_EXECUTABLE` 指向相应环境。当前没有自动依赖安装、自治调参/重跑、语义向量检索或论文忠实复现评估。一个小型代码生成任务无需先补齐所有高级模块即可实测。
+
 ---
 
 <a id="quickstart"></a>
@@ -229,7 +235,7 @@ Docker 中的工作区位于容器数据卷内，不能自动读取宿主机任�
 
 仓库已准备 `/#/demo` 静态交互演示：访问者可依次点击“创建示例任务→确认并生成样例→查看检索事件与代码预览→查看固定实验曲线”。所有内容都是预置的，不连接 Java 后端、模型或用户文件。与本地完整工作台的区别在页面顶部明确标注。
 
-推送到 GitHub 且核对源码授权后，仓库所有者在 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。然后在 **Actions** 打开 `Publish static research_agent demo`，点击 **Run workflow → main → Run workflow**。等待 build/deploy 两个 job 成功，再打开上面的预期地址，确认“创建示例任务→确认→查看固定指标”按钮可用。工作流以 `/${repo-name}/` 为资源前缀构建 `frontend/dist`；不会在每次 push 后自动公开部署。部署成功后把实测 URL 填回本节。依据：[GitHub Pages 自定义工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
+推送到 GitHub 且核对源码授权后，仓库所有者在 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。然后在 **Actions** 打开 `Publish static research_agent demo`，点击 **Run workflow → main → Run workflow**。等待 build/deploy 两个 job 成功，再打开上面的预期地址，确认“创建示例任务→确认→查看固定指标”按钮可用。工作流以 `/${repo-name}/` 为资源前缀构建 `frontend/dist`；前端或 Pages 工作流变更推送 main 后会自动重新部署，也可手动运行。依据：[GitHub Pages 自定义工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
 
 个人版本没有登录，且 API 能读取配置的工作区。因此**不能把当前无认证后端直接暴露到互联网**。以后上线在线演示时，应部署独立的演示数据目录、限制可执行能力与 API 访问，并给每位访客提供隔离空间，或只开放只读演示。完成隔离和部署验证后，在这里填写真实 HTTPS 链接、演示模式及数据保留说明。
 

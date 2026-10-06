@@ -1,4 +1,4 @@
-param([int]$Port = 18123, [switch]$EnableRunner, [switch]$SyncPapers)
+param([int]$Port = 18123, [switch]$EnableRunner, [switch]$SyncPapers, [switch]$RealCase)
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -9,6 +9,7 @@ $data = Join-Path $root 'data'
 New-Item -ItemType Directory -Force -Path $data | Out-Null
 $database = 'jdbc:h2:file:./data/research_agent_smoke_v2;MODE=MySQL;DATABASE_TO_LOWER=TRUE'
 $oldRunner = $env:RESEARCH_RUNNER_ENABLED
+if ($RealCase) { $EnableRunner = $true }
 if ($EnableRunner) { $env:RESEARCH_RUNNER_ENABLED = 'true' }
 $process = Start-Process -FilePath $java -ArgumentList @('-jar', $jar, "--server.port=$Port", "--spring.datasource.url=$database") -WorkingDirectory $root -RedirectStandardOutput (Join-Path $data 'smoke-v2.log') -RedirectStandardError (Join-Path $data 'smoke-v2.err.log') -WindowStyle Hidden -PassThru
 if ($EnableRunner) { $env:RESEARCH_RUNNER_ENABLED = $oldRunner }
@@ -52,7 +53,15 @@ try {
     }
     $runStatus = 'disabled'
     if ($EnableRunner) {
-        $run = Invoke-RestMethod -Method Post -Uri "$base/tasks/$taskId/runs" -ContentType 'application/json' -Body (@{ scriptPath='main.py' } | ConvertTo-Json)
+        $scriptPath = 'main.py'
+        if ($RealCase) {
+            $outputRoot = [System.IO.Path]::GetFullPath($final.data.outputPath)
+            $allowedRoot = [System.IO.Path]::GetFullPath((Join-Path $root 'data/workspaces')) + [System.IO.Path]::DirectorySeparatorChar
+            if (-not $outputRoot.StartsWith($allowedRoot, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Real case output escaped workspace root.' }
+            Copy-Item -LiteralPath (Join-Path $root 'examples/digits-baseline/train.py') -Destination (Join-Path $outputRoot 'digits_baseline.py')
+            $scriptPath = 'digits_baseline.py'
+        }
+        $run = Invoke-RestMethod -Method Post -Uri "$base/tasks/$taskId/runs" -ContentType 'application/json' -Body (@{ scriptPath=$scriptPath } | ConvertTo-Json)
         if ($run.data.status -ne 'WAITING_APPROVAL') { throw 'Run was not awaiting approval' }
         $runId = $run.data.id
         $null = Invoke-RestMethod -Method Post -Uri "$base/runs/$runId/approve"
@@ -65,7 +74,8 @@ try {
         $runLogs = Invoke-RestMethod "$base/runs/$runId/logs"
         $runMetrics = Invoke-RestMethod "$base/runs/$runId/metrics"
         $plot = Invoke-WebRequest "$base/runs/$runId/plot?metric=loss" -UseBasicParsing
-        if ($runStatus -ne 'SUCCEEDED' -or $runLogs.data.stdout -notmatch 'Demo metrics written') {
+        $expectedOutput = if ($RealCase) { 'testAccuracyMean' } else { 'Demo metrics written' }
+        if ($runStatus -ne 'SUCCEEDED' -or $runLogs.data.stdout -notmatch $expectedOutput) {
             throw "Runner smoke failed. Status: $runStatus; stderr: $($runLogs.data.stderr)"
         }
         if (@($runMetrics.data.series).Count -lt 1 -or $plot.Content -notmatch '<svg') {

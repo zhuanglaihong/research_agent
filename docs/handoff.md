@@ -12,7 +12,7 @@
 
 ## 验证
 
-1. 根目录 `./mvnw.cmd -B -ntp verify`：5 项测试通过，约 10 秒。
+1. 根目录 `./mvnw.cmd -B -ntp verify`：7 项测试通过，约 10 秒。
 2. `frontend/npm run build`：类型检查及生产构建通过，主包体积有优化提示。
 3. 根目录 `./scripts/smoke-demo.ps1 -EnableRunner -SyncPapers`：独立 jar 成功迁移 H2 v1–v3，命中笔记、输出 RETRIEVAL 事件、运行 Python 样例并同步 5 篇 arXiv 论文，约 8 秒。
 4. GitHub Pages 已部署至 https://zhuanglaihong.github.io/research_agent/ ，公开页面的审批、事件、代码预览和实验曲线已通过浏览器验证。
@@ -21,7 +21,7 @@
 
 1. 检查本地工作台的论文与实验模块交互，修正任何操作障碍。
 2. 用有效模型密钥评测一个小型真实代码任务，再增加可复现案例和成本/耗时记录。
-3. 后续做真实训练指标解析、自动分析/调参、PDF 理解、向量检索与 MCP；各项完成后才写成简历成果。
-4. GitHub 发布前核对剩余上游复用源码的授权。当前没有远程仓库或在线演示地址；无认证 API 不可直接对公网暴露。静态 Pages 工作流需手动运行。
+3. PDF 文本导入、分块 BM25、指标与 SVG、Digits 真实训练案例已完成；后续做自动调参、语义向量检索与 MCP。
+4. GitHub 仓库与 Pages 已上线；剩余上游复用授权需核对。前端变更推送 main 自动更新 Pages，也支持手动运行；无认证 API 不可直接对公网暴露。
 
 固定步骤不是自治科研规划；demo 是固定产物，不调用模型；live 用同步 LangChain4j 工具调用。Worker 最多两个生成任务，Runner 最多一个进程。Runner 默认关闭，且不是系统沙箱；没有自动调参或论文忠实复现保证。测试卡住超过 5 分钟先停止并审阅。
