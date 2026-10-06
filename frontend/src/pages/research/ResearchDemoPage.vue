@@ -13,6 +13,19 @@
       </div>
     </section>
 
+    <a-card class="model-deployment" :bordered="false">
+      <div>
+        <p class="eyebrow">MODEL DEPLOYMENT</p>
+        <h2>本地 Ollama 或云端 API，由部署者选择</h2>
+        <p>本地部署可让 Spring Boot 直接连接 Ollama 的 OpenAI 兼容接口；也可配置 DeepSeek 等兼容 API。切换提供方后重启服务即可。</p>
+      </div>
+      <div class="model-options">
+        <div><a-tag color="green">Ollama 本地 / 私有服务器</a-tag><code>LLM_PROVIDER=ollama</code><code>LLM_BASE_URL=http://localhost:11434/v1</code></div>
+        <div><a-tag color="blue">兼容云端 API</a-tag><code>LLM_PROVIDER=openai-compatible</code><code>LLM_BASE_URL=https://api.deepseek.com</code></div>
+        <small>Ollama 模式不需要 API Key；模型需已下载，并支持工具调用。静态 Demo 本身不会连接模型。</small>
+      </div>
+    </a-card>
+
     <ResearchCapabilityTour />
     <div class="demo-grid">
       <section class="context-column">
@@ -168,6 +181,14 @@ h1 { color:#172033; font-size:34px; margin:8px 0 12px; }
 .intro p { color:#667085; line-height:1.7; }
 .intro :deep(.ant-alert) { margin-top:18px; }
 .intro-action { flex-shrink:0; padding-top:38px; }
+.model-deployment { margin:0 0 20px; }
+.model-deployment :deep(.ant-card-body) { display:grid; grid-template-columns:minmax(0,1fr) minmax(340px,1fr); gap:22px; align-items:center; }
+.model-deployment h2 { color:#172033; font-size:20px; margin:4px 0 8px; }
+.model-deployment p { color:#667085; line-height:1.7; margin:0; }
+.model-options { display:grid; gap:10px; }
+.model-options > div { display:grid; grid-template-columns:1fr; gap:4px; padding:10px 12px; background:#f8fafc; border-radius:8px; }
+.model-options code { color:#344054; font-size:12px; }
+.model-options small { color:#98a2b3; line-height:1.6; }
 .demo-grid { display:grid; grid-template-columns:360px minmax(0,1fr); gap:20px; }
 .context-column { display:grid; gap:16px; align-content:start; }
 .context-column p { color:#475467; line-height:1.7; }
@@ -187,5 +208,5 @@ pre { background:#f8fafc; padding:16px; overflow:auto; max-height:440px; }
 .sample-metrics { display:flex; flex-direction:column; gap:12px; margin-top:18px; }
 .sample-metrics svg { width:100%; max-width:500px; background:#f8fafc; }
 .sample-metrics small { color:#667085; }
-@media(max-width:850px) { .intro { flex-direction:column; } .intro-action { padding:0; } .demo-grid { grid-template-columns:1fr; } }
+@media(max-width:850px) { .intro { flex-direction:column; } .intro-action { padding:0; } .model-deployment :deep(.ant-card-body) { grid-template-columns:1fr; } .demo-grid { grid-template-columns:1fr; } }
 </style>
