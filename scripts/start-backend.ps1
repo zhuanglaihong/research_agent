@@ -1,3 +1,5 @@
+param([switch]$EnableRunner)
+
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $envFile = Join-Path $projectRoot '.env'
@@ -10,6 +12,7 @@ if (Test-Path -LiteralPath $envFile) {
         }
     }
 }
+if ($EnableRunner) { $env:RESEARCH_RUNNER_ENABLED = 'true' }
 if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
     $portableRoot = Join-Path (Split-Path $projectRoot -Parent) '.tools/jdk21'
     $portableJava = Get-ChildItem -Path "$portableRoot/*/bin/java.exe" -ErrorAction SilentlyContinue | Select-Object -First 1

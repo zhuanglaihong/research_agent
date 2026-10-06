@@ -33,7 +33,7 @@
 - `frontend/npm run build`：Vue 类型检查与生产构建通过；Vite 提示主包体积较大，属于优化项。
 - `scripts/smoke-demo.ps1` 独立进程烟测通过：H2 v1–v5 迁移、创建项目、记忆读写、检索事件与 2 个 demo 文件；此前 Runner 和 arXiv 同步也通过烟测。
 - 静态演示已部署至 https://zhuanglaihong.github.io/research_agent/ ，Pages 工作流成功，公开页面 HTTP 200；浏览器验证创建、审批、事件、代码预览和固定指标曲线。
-- 未验证真实模型质量、Docker、macOS/Linux 实机。
+- 真实模型小型代码生成与执行链路已通过，见 live-validation.md；论文复现质量、Docker、macOS/Linux 实机尚未验证。
 - `scripts/smoke-demo.ps1 -RealCase`：真实 sklearn/Matplotlib 训练经 Java Runner 执行成功，指标与 SVG 接口通过；修正清空进程环境后 Matplotlib 配置目录不可用的问题。
 
 ## 发布边界
