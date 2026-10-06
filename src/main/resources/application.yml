@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: research_agent
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./data/research_agent;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  flyway:
+    locations: classpath:db/local
+server:
+  address: 127.0.0.1
+  port: 8123
+  servlet:
+    context-path: /api
+research:
+  workspace-root: ${RESEARCH_WORKSPACE_ROOT:./data/workspaces}
+  runner:
+    enabled: ${RESEARCH_RUNNER_ENABLED:false}
+    python-executable: ${RESEARCH_PYTHON_EXECUTABLE:python}
+  ai:
+    mode: ${RESEARCH_AI_MODE:demo}
+    api-key: ${LLM_API_KEY:}
+    base-url: ${LLM_BASE_URL:https://api.deepseek.com}
+    model: ${LLM_MODEL:deepseek-chat}
+springdoc:
+  packages-to-scan: org.researchagent.research
+knife4j:
+  enable: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never

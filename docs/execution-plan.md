@@ -1,0 +1,235 @@
+# research_agent：执行计划与技术栈
+
+版本：产品与技术规划 v1.2（快速上线 MVP）  
+日期：2026-10-05  
+状态：架构 MVP 已实施；本文仍包含完整产品目标，实际实现以 implementation-status.md 为准。
+
+> **2026-10-05 产品修订：** 当前交付目标是个人本地科研 Agent，下载后直接启动，无注册登录。默认 H2 文件数据库和本地工作区；Redis/MySQL 不是本地启动条件。后续章节含早期企业平台技术候选，不代表当前运行依赖。公网在线演示须先完成访客隔离或只读化。
+
+## 当前执行优先级（2026-10-05）
+
+按用户最新指示，先利用已有代码完成可以快速启动、演示和发布准备的架构 MVP。第一条闭环改为：项目 → 对话任务 → 确认流程 → 后台 LangChain4j Agent 生成代码 → SSE 进度 → 文件查看/下载。
+
+优先保持单体 Java 后端与现有 Vue 底座，暂不拆微服务、引入复杂队列、接入 PaperCoder 或构建独立 Runner。实验进程执行、文献订阅、RAG/MCP、科研绘图仍在完整路线，但不阻止代码生成版本搭建。
+
+目前任务流程模板固定；真实代码生成需要 live 模式与有效模型密钥。demo 是明确标识的固定样例。完整的恢复/实验能力和当前单体 Worker 的边界见 architecture.md。
+
+## 1. 名称、定位与用户
+
+项目名称与 GitHub 仓库名：**research_agent**。统一使用小写与下划线，不需要首字母大写；README、页面标题和部署文档保持同一名称。名称表示覆盖科研编程、实验监控与结果分析的科研智能体。
+
+一句话定位：**通过自然语言管理科研项目，完成论文方法实现、实验执行与监控、结果分析和可复现绘图的科研编程 Agent 工作台。**
+
+主要用户：需要阅读论文、编写科研代码、运行训练或数值实验的研究生与科研开发者。产品语言无关，允许 Python、Go、Java、C/C++、R 等项目；首轮端到端验证采用 Python/PyTorch 小型项目，另用轻量 Go 示例验证接口没有写死 Python。各语言的完整环境适配按版本逐步提供，不把设计上的可扩展性写成已支持。
+
+用户可以说：“读取这个项目，增加早停，用三个随机种子训练，对比验证指标，结束后生成图和报告。”系统把需求转换为可检查的计划、代码修改、实验运行和结果产物。
+
+产品价值来自项目上下文、任务执行、持续监控与可追溯记录。GPT 等模型可作为其模型供应商。上线后的效果必须通过实际任务验证，不承诺任意论文都能自动正确复现。
+
+## 2. 完整产品范围
+
+| 模块 | 用户行为 | 系统输出 | 质量边界 |
+| --- | --- | --- | --- |
+| 知识管理 | 设置主题、上传论文与笔记、查看每日更新 | 论文列表、摘要、方法与创新点、来源引用 | 区分摘要与全文；未知内容不补造 |
+| 新建科研项目 | 上传论文、选择数据与预算、要求实现方法 | 方法规格、实现假设、仓库、配置、检查与试跑记录 | 生成代码不等于成功复现；与论文结果对照 |
+| 接管已有项目 | 选择目录、要求改代码或运行实验 | 计划、diff、版本记录、运行任务 | 操作限定到授权目录，变更可审查 |
+| 实验监控与调整 | 查看运行、设置停止和重试规则 | 日志、资源、指标、异常事件、下一轮配置 | 调整有次数与预算上限，不无限试错 |
+| 分析与科研绘图 | 对比多个运行、提出绘图要求 | 统计表、图、绘图脚本、实验报告 | 数值由程序计算；LLM 解释，图和结论可追溯 |
+
+第一版不追求任意操作系统自动化、任意领域完整论文复现、大规模 GPU 集群调度。完整产品通过后续版本扩展远程 Runner 与多用户隔离。
+
+## 3. 最快实现路线与原型复用
+
+以 **yu-ai-code-mother 的单体版** 为主底座。前端复用 Vue 页面、登录、布局、Markdown 展示和聊天流；后端复用用户、权限、MyBatis-Flex、MySQL、Redis、聊天历史、限流和监控思路。
+
+统一采用 **LangChain4j** 处理模型与工具。核对 `yu-ai-code-mother/pom.xml` 确认其使用 LangChain4j，并同时含有 LangGraph4j；没有 Spring AI 依赖。`yu-ai-agent` 才使用 Spring AI。适配第一个项目的 ReAct、搜索、下载、RAG 和 MCP 设计时，不把 Spring AI Bean/Advisor 直接插入新项目。`yu-ai-code-mother` 已有文件工具与 LangChain4j 工具调用，改造成科研任务工具。
+
+**Spring AI 取舍：当前执行方案不加入 Spring AI 依赖。** `yu-ai-code-mother` 的 Spring Boot + LangChain4j 主链本来就适合作为保留底座；Spring Boot 保留，LangChain4j 保留。Spring AI 只在 `yu-ai-agent` 上游参考快照中。第一版以 LangChain4j 实现 Agent、RAG 与 MCP；只有后续出现无法用现有栈满足的具体需求，才评估 Spring AI。
+
+| 现有代码 | 处理方式 | 目标 |
+| --- | --- | --- |
+| HomePage、登录注册、BasicLayout | 复用并修改文案与路由 | 科研项目入口 |
+| AppChatPage、MarkdownRenderer、SSE 处理 | 保留交互基础，新增任务面板 | 对话下达任务与过程展示 |
+| App/User/ChatHistory 服务 | 业务层渐进改造；新增 research_project/task/run 表 | 避免把长任务塞进聊天或原 app 表 |
+| AiCodeGeneratorServiceFactory、文件工具 | 统一接口并增加工作区限制 | 科研编程 Agent |
+| AiCodeGeneratorFacade、StreamHandler | 把生成逻辑改成任务步骤；保留事件展示思路 | 持久任务与工具事件 |
+| VueProjectBuilder、网页预览、截图、网站部署 | 从科研主链路移出 | 替换为检查、实验执行、产物预览 |
+| yu-ai-agent 搜索、下载、RAG | 适配为 LangChain4j 工具与检索组件 | 知识管理与任务上下文 |
+| YuManus/BaseAgent | 参考循环和状态思想，重新实现持久任务 | 等待实验事件后继续执行 |
+
+本地两套仓库在核查时均未发现 LICENSE 文件。公开 GitHub 前确认上游授权；保留必要署名与来源记录。若没有可复用授权，则复用架构思路、重写相应实现，不能默认把原代码改名后重新许可。
+
+## 4. 技术栈与职责
+
+| 层次 | 第一版选型 | 职责与理由 |
+| --- | --- | --- |
+| 前端 | Vue 3、TypeScript、Vite、Ant Design Vue、Markdown、ECharts | 延续现有前端；ECharts 展示进度和实验曲线 |
+| 主后端 | Java 21、Spring Boot、MyBatis-Flex、Bean Validation | 延续业务结构；参数校验、项目权限和任务 API |
+| AI | LangChain4j、可配置模型接口、结构化输出 | 工具调用、检索、任务计划；不并行维护 Spring AI |
+| 业务数据 | MySQL、Flyway | 最快复用现有业务；以迁移脚本管理新增表 |
+| 会话与辅助控制 | Redis | 沿用会话/记忆与限流；关键任务状态保存在数据库 |
+| 向量检索 | PostgreSQL + pgvector、LangChain4j 检索组件 | 知识模块接入后增加；业务表仍保留 MySQL以降低改造量 |
+| 文档处理 | Java PDF 文本提取；必要时外部论文结构化适配器 | 普通 PDF 可先提取文本；复杂公式/版式暴露解析限制 |
+| 实验执行 | Java ProcessBuilder、Java Runner、Git | 管理实验进程、版本、日志、退出状态和产物 |
+| 科研程序 | Python/PyTorch 首轮样例；Go、Java、C/C++、R 等按项目配置；Matplotlib 为首个绘图后端 | Java 主后端管理外部程序；编程语言由论文、仓库与用户要求决定，不需要 FastAPI 服务 |
+| 调度 | Spring 定时任务 + 数据库任务租约 | 文献订阅、状态巡检；后续按需求引入 Quartz |
+| MCP | LangChain4j MCP 集成 | 对接一个确实有用的只读检索/知识服务，记录调用 |
+| 交付 | Docker Compose、GitHub Actions、JUnit、前端构建检查 | 可重复部署和自动验证 |
+| 观测 | Actuator、Micrometer、Prometheus；Grafana 可选 | 服务耗时、失败率、任务积压、模型用量 |
+
+版本策略：先从原型已使用的 Spring Boot 3.5.x / LangChain4j 组合建立可运行基线，逐步升级到经兼容验证的受支持版本，锁定依赖与 JDK。上游项目含 dev.langchain4j 包下的自定义实现，升级前逐项核查是否可删除，防止与官方类冲突。公开发布前完成依赖与漏洞审查。本文不把旧版号当成最终发布要求。
+
+Java 是主产品后端语言，前端为 TypeScript。Python 是可选科研工具运行时：首轮训练/绘图样例及直接复用 PaperCoder 时需要；一个只运行 Go 的项目不应被要求先安装 Python。环境探测按运行适配器进行，缺少命令或依赖时返回具体缺失项，不静默安装。
+
+## 5. 运行架构与任务状态
+
+浏览器 → Spring Boot 业务与 Agent 服务 → Java Runner → 用户实验进程。MySQL 保存业务与任务，pgvector 保存知识向量，文件系统保存代码与实验产物。
+
+第一版业务与 Agent 同一个 Spring Boot 服务，Runner 在同机作为独立进程运行。这样网页关闭和业务服务重启不会直接终止 Runner。第一版只支持同机；远程 Runner 注册、认证和网络通信在后续版本实现。
+
+独立 Runner 的生命周期、心跳和进程树管理属于待实现能力；当前复制的基线不包含这些能力。Runner 在宿主机启动，容器中的业务服务不能默认访问宿主机任意目录；部署时通过显式挂载/通信连接，文档分别说明运行环境。
+
+任务状态：QUEUED → PLANNING → WAITING_APPROVAL → RUNNING → WAITING_EXPERIMENT → ANALYZING → SUCCEEDED。另有 FAILED、CANCELED、INTERRUPTED。并非所有任务都经历全部状态。
+
+实验状态：QUEUED、RUNNING、SUCCEEDED、FAILED、CANCELED、LOST。不能只依赖 PID 判断是否同一进程；结合运行 ID、启动时间、Runner 心跳和结果文件核对。
+
+| 情况 | 恢复行为 |
+| --- | --- |
+| 关闭网页 | 仅断开 SSE，后台任务继续 |
+| 业务服务重启 | 从数据库与 Runner 核对任务状态，恢复订阅与后续分析 |
+| Runner 或机器重启 | 标记中断，不声称进程自动恢复；检查 checkpoint 后按规则续跑 |
+| 重复请求或重试 | 通过幂等键与 run ID 阻止重复启动 |
+| 某一步模型失败 | 有限重试，保留已完成步骤与错误，不重新启动已存在的实验 |
+
+长实验期间不需要持续调用 LLM。Runner 定期检查进程并收集指标，发生失败、完成或规则命中事件时再唤醒 Agent。不能把长实验挂在一次 HTTP 请求里，也不能依靠模型不断询问“训练完了吗”。
+
+## 6. 工具、数据与接口契约
+
+工具按任务注册：读取目录/文件、展示与应用代码修改、Git diff、执行检查、启动/查询/取消实验、读取指标、生成统计图与报告、检索论文/知识。记录工具参数、结果摘要、执行时间和关联任务。
+
+文件路径规范化后验证仍位于工作区；运行命令使用参数数组并明确工作目录。设置任务超时、输出大小、并发上限与资源预算。代码修改前留版本或备份。取消实验应终止对应进程树，不能只关闭网页或杀任意同名进程。
+
+建议数据表：
+
+| 表 | 关键数据 |
+| --- | --- |
+| research_project | 用户、名称、工作区、目标、环境说明 |
+| research_task / task_step | 需求、状态、结构化计划、步骤结果、预算、错误 |
+| experiment_run | 任务、命令、环境摘要、代码版本、参数、进程身份、起止时间 |
+| metric_point / artifact | run ID、指标、步数、图/模型/报告路径、数据来源 |
+| paper / knowledge_document / subscription | DOI或来源ID、版本、摘要、原文位置、订阅规则 |
+
+保留 chat_history；另加 task_event 保存进度，approval 保存待确认操作。向量块携带 document ID、项目 ID、页码或段落位置，权限过滤先于检索结果交给模型。
+
+建议 API：POST /research-projects、POST /projects/{id}/tasks、GET /tasks/{id}、GET /tasks/{id}/events、POST /tasks/{id}/approve、POST /tasks/{id}/cancel、GET /projects/{id}/runs、GET /runs/{id}/metrics、POST /papers/import、POST /subscriptions。
+
+SSE 事件采用统一 JSON：eventId、taskId、runId、type、timestamp、payload。类型包含状态变化、模型文本、工具开始/结束、代码 diff、日志更新、指标、产物和错误。前端刷新先读取任务快照，再订阅增量事件；服务端支持按 eventId 补发。done 只表示对应流结束，实验状态以任务记录为准。
+
+实验输出统一放在 runs/{runId}/：run.json 保存参数与环境摘要，metrics.jsonl 每行记录指标，stdout.log/stderr.log 保存输出，result.json 保存最终状态与产物。优先支持这个简单协议，后续可适配 MLflow 等现成跟踪系统。历史实验没有统一指标时，先生成适配脚本并明确解析规则。
+
+## 7. 三个模块的实现流程
+
+### 7.1 知识管理
+
+订阅主题 → 按来源游标增量获取 → 标识去重与版本更新 → 摘要/全文解析 → 结构化提取 → 保存出处 → 向量入库 → 每日简报。
+
+第一版只接一个与示例研究方向相符的数据源。失败保存游标与原因；同一调度重跑不重复入库。全文不可获得时只处理可用摘要。RAG 问答输出来源与段落；无充分证据时说明缺失。创新点是论文主张或助手归纳，不能写成经独立验证的事实。
+
+### 7.2 论文到代码
+
+论文解析 → 方法规格与未明确细节 → 实现计划 → 文件生成 → 导入/语法/小数据测试 → 有限修复 → 最小试跑 → 方法对应表与代码交付。
+
+第一版为可解析的机器学习论文与小规模实验，不承诺所有论文。优先检查论文是否已有官方实现，用户可选择接管官方仓库，避免重复生成。没有明确的超参数、数据或实现细节时记录假设。
+
+采用 PaperToCodeProvider 接口，统一输入论文/数据说明/预算，统一输出代码目录、阶段记录和检查结果。最快路径是外部 PaperCoder 适配器；保持 Java API，不新增 Python Web 服务。接入前检查其许可、运行脚本、输入格式、错误和输出结构，不把上游 README 成功示例视作本项目已复现。若外部接入成本过高，先用 Java + LangChain4j 实现规划/分析/生成三个步骤。
+
+### 7.3 实验与绘图
+
+确认代码与配置 → 启动运行 → 记录环境、版本和参数 → 周期采集日志/指标 → 异常或完成事件 → 程序计算统计量 → 模型生成解释 → 绘图与报告 → 提议下一轮。
+
+允许按计划执行多个种子/配置；统计时注明样本数量、指标方向和缺失运行。多种子汇总可输出均值和标准差，不能把单次结果标作统计稳定。调整分两类：训练脚本已支持的早停/调度规则；Agent 结束或暂停当前运行后变更配置启动新运行。第一版不支持任意进程内热修改。
+
+实时图用 ECharts。导出图用可重跑的 Matplotlib 脚本，输出 PNG + PDF/SVG、源数据和脚本。设置字体、尺寸、图例、单位与误差条；保存数据版本。验收目标为符合指定论文/会议模板的图，不保证一键达到所有期刊规范。
+
+## 8. 五个里程碑与验收
+
+预计总投入 **160—240 小时**，按每周 20—30 小时约 8—10 周。Java 熟悉程度、GPU、上游授权和 PaperCoder 环境会影响时间。优先拿到已有项目的完整执行闭环，再扩大覆盖。
+
+| 里程碑 | 预计投入 | 有界任务 | 验收与演示 |
+| --- | --- | --- | --- |
+| M0 基线与产品外壳 | 12—20小时 | 建新仓库；核对复用授权；启动原型；新增科研项目与任务表；配置迁移 | 登录后创建科研项目；前后端构建通过；上游自定义类清单明确 |
+| M1 实验执行闭环 | 40—55小时 | Java Runner；run ID/日志/指标协议；后台运行；取消/心跳；前端状态与曲线 | 对话启动小实验；关闭网页后继续；重复请求不重复启动；重开可看到记录 |
+| M2 编程与分析 Agent | 35—50小时 | 项目上下文、代码 diff、检查、有限修复；结果统计；图与报告 | 增加早停并试跑；分析真实指标；报告能追溯版本/参数/数据；服务重启恢复 |
+| M3 论文转代码与知识 | 45—70小时 | 单一论文源；PDF/笔记入库；RAG 引用；PaperToCodeProvider；每日简报 | 论文到最小实现可试跑；已有官方代码可接管；知识问答有出处；调度去重 |
+| M4 发布与证据 | 28—45小时 | 一个实际 MCP 集成；CI/部署；回归评测；故障演练；Demo/视频/README | 新环境按文档启动；固定任务评测可重复；源码与许可清楚；公开 Demo 无私人数据 |
+
+M1+M2 即可形成首个简历 Demo，不必等待 M3 全部完成。每个里程碑先完成端到端行为，再完善视觉和新增工具。任务不可执行时返回明确缺失条件，不用聊天文字伪装执行成功。
+
+## 9. 测试、评测与面试证据
+
+| 关注点 | 有意义的验证 | 保留的证据 |
+| --- | --- | --- |
+| 代码任务 | 导入/运行检查、固定小样本输入、预期行为 | 修改前后 diff、检查输出、失败原因 |
+| 长任务可靠性 | 关闭前端、业务服务重启、Runner 断开、重复请求与取消 | 状态变化、心跳、唯一 run、恢复记录 |
+| RAG 与知识 | 固定问题、出处正确性、跨项目权限、无答案问题 | 题集、人工标注、引用匹配率 |
+| 实验分析 | 统计量与独立计算对照、缺失运行、指标方向 | 原始指标、计算脚本、报告与图 |
+| 使用效果 | 真实任务完成率、耗时、成本、人工干预次数 | 测试条件、样本数量、用户反馈 |
+
+选择至少三个公开可运行场景：已有仓库增加早停；多个种子训练并对比绘图；一篇小型论文方法生成与试跑。为失败场景准备命令报错、数据缺失和资源不足样例。模型输出好听不能作为成功标准。
+
+阶段2：通过 Agent、Prompt、RAG、Tool Calling、实际 MCP 调用证明。阶段3：通过 Java 业务、权限、迁移、测试、持久化和可部署性证明。阶段4：第二版再实现远程 Runner、多用户隔离、资源限额、任务租约和故障恢复；压测报告注明硬件、并发、任务类型与限制。多角色 Agent 只有在相同任务集上优于单 Agent 时才保留。
+
+## 10. 发布清单与第一轮行动
+
+| 交付物 | 必须包含 |
+| --- | --- |
+| README | 定位、已实现/规划功能、快速启动、架构、模型配置、成本说明 |
+| 示例与 Demo | 小型数据/训练项目、示例论文或可合法分发资料、完整任务回放 |
+| 部署 | Compose、环境变量模板、数据库迁移、Runner 说明；服务部署与实验运行环境分别说明 |
+| 工程证据 | CI、评测集、故障恢复记录、版本与已知限制 |
+| 来源与许可 | 上游代码许可核对、引用/署名、第三方清单，不提交密钥与私人研究数据 |
+
+第一轮行动：选择一个已有 Python 训练仓库，整理启动命令、环境、指标与输出位置；在新项目中建立任务与 run 记录；用 Java 启动它并让前端显示状态。这个切片通过后，再加入 LLM 的规划和改代码能力。
+
+## 11. 多语言运行契约（实现时必须遵循）
+
+ProjectRuntimeSpec 至少包含 language、workingDirectory、environment、checkCommand、runCommand、timeoutSeconds、artifactGlobs。CommandSpec 使用 executable 与 arguments 数组，不以一段字符串拼接 shell 命令。保存命令与环境时隐藏密钥。相对目录必须位于授权 workspace 内，拒绝越界路径。
+
+| 接口/类型 | 职责 | 首轮实现 |
+| --- | --- | --- |
+| RuntimeAdapter | 探测环境、形成检查/执行命令、解释退出状态 | GenericCommandAdapter，PythonAdapter；随后 GoAdapter |
+| RunSpec | 描述一次运行，不包含语言固定假设 | taskId、runId、command、workspace、预算、产物规则 |
+| ExperimentRunner | 启动/取消/查询进程并发送事件 | 独立 Java 进程模式，stdout/stderr 持续消费 |
+| MetricsAdapter | 解析任务产生的指标 | JSONL 协议；已有仓库通过显式规则适配 |
+| PaperToCodeProvider | 论文到代码，实现语言可选择 | targetLanguage 与支持能力清单；不支持时明确返回 |
+
+Python 检查可配置为 python -m compileall，Go 检查可配置为 go test ./...，实际命令取决于项目。不能从论文关键词自动假定使用 Python。既有仓库语言由文件与配置检测，用户选择优先于自动推断。
+
+metrics.jsonl/result.json 等协议应能被任意语言写入，Runner 也可根据适配器解析输出。duration、step、metricName、value、unit 等统一字段独立于 PyTorch。实验适用于训练、仿真、求解器与算法评测。长任务进度缺少总量时显示已运行时间/最新活动，不伪造百分比。
+
+## 12. 文件级复用与交接入口
+
+新项目根目录：**D:/project/Agent/research_agent**。后端位于 src/，前端统一位于 frontend/。包名暂保留 com.yupi.yuaicodemother 以建立基线，M0 通过后再统一重命名；新代码包暂置于 com.yupi.yuaicodemother.research 下，避免新增组件未被扫描。
+
+复制清单位于 **docs/reuse-manifest.csv**，包含 source project/path、目标路径与原始 SHA256。逐组件的保留/适配/参考/退出科研主链路说明位于 **docs/reuse-map.md**。这两个文件覆盖原型文件，不表示所有基线组件都是最终产品需要的。
+
+另一位执行 Agent 首先读取根目录 AGENTS.md，然后依次阅读 docs/handoff.md、本文及 docs/reuse-map.md。实施进度写入 docs/implementation-status.md。源项目只读，所有修改在新目录进行。每完成一项更新状态、验证方法与限制；不能把“已复制”写成“科研功能已实现”。
+
+## 13. 明确的首轮执行顺序
+
+| 任务 | 主要文件/位置 | 输出与完成标准 |
+| --- | --- | --- |
+| T00 检查复制基线 | pom.xml、src/、frontend/、sql/ | 后端 compile、前端 type-check/build；记录继承问题；不先升级全部依赖 |
+| T01 外部配置与服务启动 | application.yml、.env.example、compose.yml | 使用 research_agent 数据库；无真实密钥；登录与健康检查；外部服务缺失时错误明确 |
+| T02 科研项目与任务骨架 | research/project、research/task、Flyway、前端 research 页面 | 创建项目、提交任务、查询快照、SSE 事件；先用不依赖模型的执行样例 |
+| T03 运行与恢复闭环 | research/runtime、research/runner、task_event/experiment_run | Python 样例完成并显示真实状态；刷新和服务重启验证；轻量 Go 样例验证命令抽象 |
+| T04 Agent 接入 | research/agent、research/tool、prompt/research | 对话产生计划→工具执行→任务事件；代码 diff/检查；有限重试 |
+
+T04 后按 M2—M4 接入统计绘图、PaperCoder、RAG、订阅、MCP 与发布评测。详情分别见第7—9节。首轮不要继续沿用“生成 Vue 项目→npm build→复制网站”的科研执行逻辑。
+
+参考：
+
+- PaperCoder：https://github.com/going-doer/Paper2Code
+- 本地产品底座：D:/project/Agent/yu-ai-code-mother
+- 本地工具与RAG参考：D:/project/Agent/yu-ai-agent
+
