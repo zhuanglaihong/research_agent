@@ -320,6 +320,8 @@ Dockerfile 负责构建应用镜像，`compose.yaml` 负责前后端服务、网
 
 <a id="demo"></a>
 
+**本地 Demo 流程画布：**右侧“流程”页支持节点拖动、连线随动、平移缩放、展开、选中节点查看相关产物；布局自动保存在浏览器。拖动只修改布局，不改变执行依赖。自定义节点/连线驱动后端执行尚待实现。
+
 ## 🌐 在线演示
 
 **在线演示：[打开 research_agent Demo](https://zhuanglaihong.github.io/research_agent/)。** GitHub Pages 已部署；2026-10-06 验证页面可访问及固定交互流程。

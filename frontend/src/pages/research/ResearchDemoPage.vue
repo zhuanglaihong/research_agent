@@ -3,6 +3,7 @@ import { computed, nextTick, onUnmounted, ref } from 'vue'
 import { scenarios } from '@/fixtures/research-demo'
 import report from '@/fixtures/feedback-report.json'
 import RealExperimentCase from '@/components/RealExperimentCase.vue'
+import ResearchWorkflowCanvas from '@/components/ResearchWorkflowCanvas.vue'
 
 const selected = ref(3)
 const scene = computed(() => scenarios[selected.value]!)
@@ -11,6 +12,7 @@ const draft = ref('')
 const request = ref('')
 const completed = ref(0)
 const tab = ref('flow')
+const wideWorkspace = ref(false)
 const fileIndex = ref(0)
 const modal = ref('')
 const followups = ref<string[]>([])
@@ -72,7 +74,7 @@ onUnmounted(stop)
     <main class="workspace">
       <header class="workspace-header"><div><span class="breadcrumb">工作空间 / </span>{{ scene.short }}</div><div class="header-actions"><span class="preview-label">交互演示</span><button class="quiet" @click="choose(selected)">重置</button></div></header>
       <div class="demo-notice"><span>ⓘ</span> 静态演示：预置对话与流程回放，不调用模型、不执行代码、不访问你的电脑。</div>
-      <div class="workspace-grid">
+      <div class="workspace-grid" :class="{ 'wide-workspace': wideWorkspace }">
         <section class="conversation" aria-label="科研对话">
           <div class="conversation-top"><span class="status-dot" :class="{ running: phase === 'running' }"></span>{{ labels[phase] }}<span class="case-badge">{{ scene.verified ? '本机实测记录' : '预置产品流程' }}</span></div>
           <div ref="transcript" class="transcript" aria-live="polite">
@@ -102,11 +104,11 @@ onUnmounted(stop)
           </div>
         </section>
         <aside class="inspector" aria-label="任务可视化管理">
-          <div class="inspector-heading"><span>任务工作区</span><small>{{ scene.verified ? 'VERIFIED RECORD' : 'PRODUCT PREVIEW' }}</small></div>
+          <div class="inspector-heading"><span>任务工作区</span><button class="quiet" :aria-pressed="wideWorkspace" @click="wideWorkspace = !wideWorkspace">{{ wideWorkspace ? '收起画布' : '展开画布' }}</button><small>{{ scene.verified ? 'VERIFIED RECORD' : 'PRODUCT PREVIEW' }}</small></div>
           <nav class="inspector-tabs"><button v-for="item in [{id:'flow',name:'流程'},{id:'files',name:'产物'},{id:'logs',name:'日志'},{id:'results',name:'结果'},{id:'evidence',name:'说明'}]" :key="item.id" :class="{ active: tab === item.id }" @click="tab = item.id">{{ item.name }}</button></nav>
           <div class="inspector-body">
             <template v-if="tab === 'flow'"><div class="eyebrow">WORKFLOW</div><h2>{{ scene.title }}</h2><p class="muted">每一步都可追踪，关键执行由你确认。</p><div class="progress-heading"><span>回放进度</span><b>{{ completed }}/{{ scene.steps.length }}</b></div><div class="progress-track"><span :style="{width: completed / scene.steps.length * 100 + '%'}"></span></div>
-              <ol class="step-list"><li v-for="(step, i) in scene.steps" :key="step" :class="{ complete: i < completed, current: i === completed && phase !== 'ready' }"><span>{{ i < completed ? '✓' : String(i + 1).padStart(2, '0') }}</span><div><strong>{{ step }}</strong><small>{{ i < completed ? '回放已展示' : i === completed && phase === 'runApproval' ? '等待人工确认' : '等待展示' }}</small></div></li></ol>
+              <ResearchWorkflowCanvas :scenario-id="String(selected)" :steps="scene.steps" :tools="scene.tools" :completed="completed" :phase="phase" @inspect="tab = $event" />
               <div class="note-box">进度是演示步骤计数；真实后端通过任务事件和运行状态展示进度。</div>
             </template>
             <template v-if="tab === 'files'"><div class="eyebrow">ARTIFACTS</div><h2>可审阅的产物</h2><p class="muted">{{ scene.verified ? '真实脚本与审阅记录；分析页为预置说明。' : '预置说明文件，不是在线生成代码。' }}</p><div class="file-list"><button v-for="(item,i) in scene.files" :key="item.name" :class="{ active: fileIndex === i }" @click="fileIndex = i">▤ {{ item.name }}</button></div><div class="file-preview"><div>{{ file.name }} <button @click="download">下载 ↓</button></div><pre>{{ file.content }}</pre></div></template>
@@ -145,4 +147,7 @@ button,a,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:defa
 @media(max-width:960px){.workspace-grid{grid-template-columns:1fr;height:auto;min-height:0}.conversation{min-height:700px;height:calc(100dvh - 105px)}.inspector{border-top:1px solid var(--line);border-left:0}.inspector-body{min-height:370px}.rail-evidence button{font-size:10px}.welcome{margin-top:4vh}.inspector-heading{padding-top:20px}}
 @media(max-width:600px){.research-shell{display:block}.rail{padding:15px;border-right:0;border-bottom:1px solid var(--line);gap:10px}.brand{font-size:15px}.new-task,.rail-label,.project-name,.rail-evidence,.rail-bottom{display:none}.scene-nav{display:flex;overflow:auto;gap:4px}.scene-nav button{white-space:nowrap;padding:10px;font-size:11px}.scene-nav button>span,.scene-nav b{display:none}.workspace-header{height:52px;padding:0 17px;font-size:11px}.demo-notice{padding:10px 17px;line-height:1.7}.conversation{height:760px;min-height:0}.conversation-top{padding:18px}.welcome{margin-top:18px}.welcome h1{font-size:33px}.transcript{padding:0 19px 20px}.welcome-symbol{margin-bottom:15px}.prompt-card{margin-top:20px;padding:18px}.composer-area{padding:12px 17px}.user-message{margin-left:15px}.assistant-label small{font-size:8px}.tool-stream>div>span:last-child{display:none}.demo-modal{padding:30px 20px}.modal-backdrop{padding:12px}.inspector-body{padding:23px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+.workspace-grid.wide-workspace{grid-template-columns:minmax(340px,1fr) minmax(500px,52%)}
+@media(max-width:1180px){.workspace-grid.wide-workspace{grid-template-columns:minmax(300px,1fr) minmax(380px,52%)}}
+@media(max-width:960px){.workspace-grid.wide-workspace{grid-template-columns:1fr}.inspector-heading .quiet{display:none}}
 </style>
