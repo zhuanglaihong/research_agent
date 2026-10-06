@@ -26,6 +26,18 @@
           </div>
         </a-tab-pane>
         <a-tab-pane key="papers" :tab="`每日论文 (${papers.length})`">
+          <div class="paper-import">
+            <h3>论文 PDF → 代码任务</h3>
+            <p class="context-help">上传可复制文本的 PDF（≤10 MB、≤100 页），先审阅抽取的方法片段，再创建待确认的代码任务。扫描版 PDF 需先 OCR。</p>
+            <a-input v-model:value="pdfTitle" placeholder="论文标题" :maxlength="500" />
+            <input type="file" accept="application/pdf,.pdf" @change="selectPdf" />
+            <a-button :loading="uploadingPdf" @click="importPdf">导入 PDF</a-button>
+            <ul class="paper-list"><li v-for="method in paperMethods" :key="method.id">
+              <strong>{{ method.title }}</strong><small>已抽取 {{ method.textLength }} 字符 · {{ method.source }}</small>
+              <pre class="method-brief">{{ method.methodBrief }}</pre>
+              <a-button size="small" @click="createMethodTask(method)">创建待确认代码任务</a-button>
+            </li></ul>
+          </div>
           <p class="context-help">填写英文研究主题。可手动同步最新 arXiv 摘要；打开每日同步后，本地后端每天 08:00 检查一次。新摘要会加入当前项目的可检索笔记。</p>
           <div class="paper-settings">
             <a-input v-model:value="paperTopic" placeholder="例如：remote sensing segmentation" :maxlength="100" />
@@ -104,7 +116,7 @@ import { getResearchProject, type ResearchProject } from '@/api/researchProjectC
 import { listTasks, createTask, getTask, approveTask, cancelTask, getTaskEvents, getTaskFiles, getTaskFile, type ResearchTask, type TaskEvent } from '@/api/researchTaskController'
 import { API_BASE_URL } from '@/config/env'
 import { getProjectMemory, saveProjectMemory, listKnowledge, addKnowledge, searchKnowledge, type KnowledgeDocument, type KnowledgeHit } from '@/api/researchKnowledge'
-import { getPaperSubscription, savePaperSubscription, listPapers, syncPapers, type PaperItem, type PaperSubscription } from '@/api/researchPaper'
+import { getPaperSubscription, savePaperSubscription, listPapers, syncPapers, listPaperMethods, uploadPaperMethod, createPaperMethodTask, type PaperItem, type PaperSubscription, type PaperMethod } from '@/api/researchPaper'
 
 const route = useRoute()
 const projectId = String(route.params.id)
@@ -133,6 +145,10 @@ const paperTopic = ref('')
 const paperEnabled = ref(false)
 const paperSubscription = ref<PaperSubscription>()
 const papers = ref<PaperItem[]>([])
+const paperMethods = ref<PaperMethod[]>([])
+const pdfTitle = ref('')
+const pdfFile = ref<File>()
+const uploadingPdf = ref(false)
 const savingPaper = ref(false)
 const syncingPaper = ref(false)
 let stream: EventSource | undefined
@@ -190,7 +206,7 @@ const subscribe = (id: string) => {
   source.addEventListener('business-error', () => { source.close(); connection.value = '进度订阅失败，请刷新页面' })
 }
 const loadContext = async () => {
-  const [saved, documents, subscription, paperList] = await Promise.all([getProjectMemory(projectId), listKnowledge(projectId), getPaperSubscription(projectId), listPapers(projectId)])
+  const [saved, documents, subscription, paperList, methods] = await Promise.all([getProjectMemory(projectId), listKnowledge(projectId), getPaperSubscription(projectId), listPapers(projectId), listPaperMethods(projectId)])
   if (saved.data.code !== 0 || documents.data.code !== 0 || subscription.data.code !== 0 || paperList.data.code !== 0) throw new Error('无法加载项目记忆、笔记或论文')
   memoryText.value = saved.data.data || ''
   knowledgeDocs.value = documents.data.data || []
@@ -198,6 +214,31 @@ const loadContext = async () => {
   paperTopic.value = subscription.data.data?.topic || ''
   paperEnabled.value = subscription.data.data?.enabled || false
   papers.value = paperList.data.data || []
+  paperMethods.value = methods.data.data || []
+}
+const selectPdf = (event: Event) => { pdfFile.value = (event.target as HTMLInputElement).files?.[0] }
+const importPdf = async () => {
+  if (!pdfTitle.value.trim() || !pdfFile.value) { message.warning('请填写标题并选择 PDF'); return }
+  uploadingPdf.value = true
+  try {
+    const result = await uploadPaperMethod(projectId, pdfTitle.value.trim(), pdfFile.value)
+    if (result.data.code !== 0) throw new Error(result.data.message)
+    paperMethods.value = (await listPaperMethods(projectId)).data.data || []
+    knowledgeDocs.value = (await listKnowledge(projectId)).data.data || []
+    pdfTitle.value = ''; pdfFile.value = undefined
+    message.success('PDF 已导入，请核对方法片段')
+  } catch (error) { message.error(error instanceof Error ? error.message : 'PDF 导入失败') }
+  finally { uploadingPdf.value = false }
+}
+const createMethodTask = async (method: PaperMethod) => {
+  try {
+    const result = await createPaperMethodTask(projectId, method.id, '')
+    if (result.data.code !== 0) throw new Error(result.data.message)
+    await loadTasks()
+    const task = tasks.value.find(item => item.id === result.data.data.id)
+    if (task) await selectTask(task)
+    message.info('代码任务已创建，请检查任务计划后确认生成')
+  } catch (error) { message.error(error instanceof Error ? error.message : '创建任务失败') }
 }
 const savePaperSettings = async () => {
   if (!paperTopic.value.trim()) { message.warning('请填写英文研究主题'); return }
@@ -348,6 +389,9 @@ onUnmounted(() => stream?.close())
 .paper-list a { font-weight:600; }
 .paper-list small { display:block; color:#98a2b3; margin-top:4px; }
 .paper-list p { color:#475467; max-height:7em; overflow:auto; }
+.paper-import { border:1px solid #d6e4ff; border-radius:8px; padding:16px; margin-bottom:20px; }
+.paper-import input[type=file] { display:block; margin:12px 0; }
+.method-brief { white-space:pre-wrap; max-height:180px; overflow:auto; background:#f8fafc; padding:12px; }
 .knowledge-hits { list-style:none; margin:12px 0 0; padding:0; }
 .knowledge-hits li { border-bottom:1px solid #eee; padding:10px 0; }
 .knowledge-hits p { color:#667085; margin:6px 0; }

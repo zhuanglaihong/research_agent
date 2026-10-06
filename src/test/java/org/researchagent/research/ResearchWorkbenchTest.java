@@ -25,6 +25,13 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipInputStream;
 import java.io.ByteArrayInputStream;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.springframework.mock.web.MockMultipartFile;
+import java.io.ByteArrayOutputStream;
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -51,7 +58,7 @@ class ResearchWorkbenchTest {
     @TestConfiguration static class Database {
         @Bean JdbcTemplate jdbcTemplate(DataSource source) throws Exception {
             var jdbc=new JdbcTemplate(source);
-            for (String name:List.of("V1__local_research_schema.sql", "V2__knowledge_documents.sql", "V3__paper_subscriptions.sql")) {
+            for (String name:List.of("V1__local_research_schema.sql", "V2__knowledge_documents.sql", "V3__paper_subscriptions.sql", "V4__paper_to_code.sql")) {
                 String sql=new String(new ClassPathResource("db/local/"+name).getInputStream().readAllBytes(),StandardCharsets.UTF_8);
                 try (var connection=source.getConnection()) {
                     org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(connection,
@@ -135,6 +142,36 @@ class ResearchWorkbenchTest {
         assertThat(body(mvc.perform(put("/research-projects/"+project+"/papers/subscription")
                 .contentType("application/json").content("{\"topic\":\"../../secret\",\"enabled\":true}")))
                 .path("code").asInt()).isNotZero();
+    }
+    @Test void pdfImportCreatesReviewablePaperToCodeTask() throws Exception {
+        String project = project("python");
+        byte[] pdf;
+        try (var document = new PDDocument(); var output = new ByteArrayOutputStream()) {
+            var page = new PDPage(); document.addPage(page);
+            try (var content = new PDPageContentStream(document, page)) {
+                content.beginText(); content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                content.newLineAtOffset(40, 750);
+                content.showText("Method"); content.newLineAtOffset(0, -20);
+                String line = "We train an encoder with three random seeds and compare held out accuracy. ";
+                for (int i = 0; i < 6; i++) { content.showText(line); content.newLineAtOffset(0, -20); }
+                content.endText();
+            }
+            document.save(output); pdf = output.toByteArray();
+        }
+        var response = body(mvc.perform(multipart("/research-projects/"+project+"/paper-methods")
+                .file(new MockMultipartFile("file", "paper.pdf", "application/pdf", pdf)).param("title", "Encoder Paper")));
+        assertThat(response.path("code").asInt()).isZero();
+        String methodId = response.path("data").path("id").asText();
+        assertThat(response.path("data").path("methodBrief").asText()).contains("random seeds");
+        assertThat(body(mvc.perform(get("/research-projects/"+project+"/paper-methods"))).path("data").size()).isEqualTo(1);
+        var task = body(mvc.perform(post("/research-projects/"+project+"/paper-methods/"+methodId+"/tasks")
+                .contentType("application/json").content("{\"instructions\":\"use local data\"}")));
+        assertThat(task.path("data").path("status").asText()).isEqualTo("WAITING_APPROVAL");
+        assertThat(task.path("data").path("requestText").asText()).contains("Encoder Paper", "use local data");
+        var bad = body(mvc.perform(multipart("/research-projects/"+project+"/paper-methods")
+                .file(new MockMultipartFile("file", "fake.pdf", "application/pdf", "bad".getBytes(StandardCharsets.UTF_8)))
+                .param("title", "Bad")));
+        assertThat(bad.path("code").asInt()).isNotZero();
     }
     @Test void actualLangChainToolLoopWritesAnArtifactUsingCompatibleMockEndpoint() throws Exception {
         long project=Long.parseLong(project("python"));
