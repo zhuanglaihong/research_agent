@@ -95,7 +95,7 @@
           </div>
           <a-tabs v-model:active-key="activeTab">
             <a-tab-pane key="progress" tab="执行进度">
-              <ul class="event-list"><li v-for="event in events" :key="event.id"><time>{{ new Date(event.timestamp).toLocaleTimeString() }}</time><div class="event-content"><span>{{ eventText(event) }}</span><details v-if="event.type === 'TOOL' || event.type === 'RETRIEVAL'" class="event-details"><summary>{{ event.type === 'TOOL' ? '查看工具调用记录' : '查看检索记录' }}</summary><pre>{{ eventDetails(event) }}</pre><small v-if="event.type === 'TOOL'">显示任务事件中保存的调用元数据。</small></details></div></li></ul>
+              <ul class="event-list"><li v-for="event in events" :key="event.id"><time>{{ new Date(event.timestamp).toLocaleTimeString() }}</time><div class="event-content"><span>{{ eventText(event) }}</span><details v-if="['TOOL','TOOL_RESULT','RETRIEVAL','RETRIEVAL_RESULT'].includes(event.type)" class="event-details"><summary>{{ event.type === 'TOOL' || event.type === 'RETRIEVAL' ? '查看调用记录' : '查看结果记录' }}</summary><pre>{{ eventDetails(event) }}</pre><small v-if="event.type === 'TOOL' || event.type === 'TOOL_RESULT'">事件只保留工具标识、限定元数据和执行状态，不保存生成文件正文。</small></details></div></li></ul>
               <a-empty v-if="events.length === 0" description="尚无进度事件" />
             </a-tab-pane>
             <a-tab-pane key="result" tab="助手总结"><MarkdownRenderer v-if="selected.resultText" :content="selected.resultText" /><a-empty v-else description="任务完成后展示总结" /></a-tab-pane>
@@ -173,6 +173,8 @@ const eventText = (event: TaskEvent) => {
   try {
     const value = JSON.parse(event.payload)
     if (event.type === 'RETRIEVAL') return `检索到 ${value.count ?? 0} 条笔记${value.sources?.length ? ` · ${value.sources.join('、')}` : ''}`
+    if (event.type === 'RETRIEVAL_RESULT') return `检索完成 · ${value.count ?? 0} 条结果 · ${value.characters ?? 0} 字符`
+    if (event.type === 'TOOL_RESULT') return `${value.name} · ${value.status === 'SUCCEEDED' ? '调用成功' : '调用失败'}${value.characters !== undefined ? ` · 返回 ${value.characters} 字符` : ''}${value.errorType ? ` · ${value.errorType}` : ''}`
     if (event.type === 'MEMORY') return value.message || '项目记忆已更新'
     if (value.name) return `${value.name}${value.path ? ` · ${value.path}` : ''}${value.count !== undefined ? ` · ${value.count} 个文件` : ''}`
     return value.message || statusLabel(value.status || event.type)
