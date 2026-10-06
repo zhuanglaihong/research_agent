@@ -225,7 +225,7 @@ Docker 中的工作区位于容器数据卷内，不能自动读取宿主机任�
 
 ## 🌐 在线演示
 
-**在线演示链接：待 GitHub Pages 启用后验证。** 预期地址为 `https://zhuanglaihong.github.io/research_agent/`；当前不能把它当作已上线链接。
+**在线演示：[打开 research_agent Demo](https://zhuanglaihong.github.io/research_agent/)。** GitHub Pages 已部署；2026-10-06 验证页面可访问及固定交互流程。
 
 仓库已准备 `/#/demo` 静态交互演示：访问者可依次点击“创建示例任务→确认并生成样例→查看检索事件与代码预览→查看固定实验曲线”。所有内容都是预置的，不连接 Java 后端、模型或用户文件。与本地完整工作台的区别在页面顶部明确标注。
 
@@ -245,7 +245,7 @@ Docker 中的工作区位于容器数据卷内，不能自动读取宿主机任�
 bash mvnw -B -ntp verify
 ```
 
-前端在 `frontend/` 运行 `npm run build`。当前本机验证：后端 7 项集成测试通过，前端类型检查及构建通过；独立进程烟测通过 H2 v1–v5 迁移、记忆、分块检索、审批与代码产物；此前 Python Runner 和 arXiv 同步通过烟测。指标 API 与 SVG 输出有集成测试。真实模型效果、Docker、GitHub Pages 工作流和跨系统实机尚未验证。
+前端在 `frontend/` 运行 `npm run build`。当前验证：后端 7 项集成测试通过，前端类型检查及构建通过；独立进程烟测通过 H2 v1–v5 迁移、记忆、分块检索、审批与代码产物；此前 Python Runner 和 arXiv 同步通过烟测。指标 API 与 SVG 输出有集成测试。GitHub Pages 工作流成功，公开 Demo 按钮流程通过浏览器验证。真实模型效果、Docker和跨系统实机尚未验证。
 
 | 情况 | 处理 |
 | --- | --- |

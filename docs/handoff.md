@@ -15,7 +15,7 @@
 1. 根目录 `./mvnw.cmd -B -ntp verify`：5 项测试通过，约 10 秒。
 2. `frontend/npm run build`：类型检查及生产构建通过，主包体积有优化提示。
 3. 根目录 `./scripts/smoke-demo.ps1 -EnableRunner -SyncPapers`：独立 jar 成功迁移 H2 v1–v3，命中笔记、输出 RETRIEVAL 事件、运行 Python 样例并同步 5 篇 arXiv 论文，约 8 秒。
-4. 浏览器已验证 `/#/demo` 的审批、事件、代码预览；GitHub Pages 工作流尚未远程运行。
+4. GitHub Pages 已部署至 https://zhuanglaihong.github.io/research_agent/ ，公开页面的审批、事件、代码预览和实验曲线已通过浏览器验证。
 
 ## 下一步
 
