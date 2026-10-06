@@ -1,4 +1,5 @@
 import train from './feedback-train.txt?raw'
+import analysis from './feedback-analysis.md?raw'
 export const scenarios = [
   {
     title: '追踪领域论文',
@@ -7,14 +8,14 @@ export const scenarios = [
     project: '论文阅读空间',
     verified: false,
     prompt: '整理 Transformer 相关论文的方法与创新点，为我的项目保存带来源的阅读笔记。',
-    description: '先检索已有文献，再整理方法与引用。此处展示预置阅读流程，不发起在线检索。',
+    description: '先检索已有文献，再整理方法与引用。阅读笔记按项目组织，并保留论文来源。',
     steps: ['检索项目文献', '读取来源片段', '整理阅读笔记', '核对引用'],
     tools: ['searchResearchNotes', 'listCollectedPapers', 'rememberProjectFinding', '引用核对'],
     files: [
       {
         name: 'reading-notes.md',
         content:
-          '# 阅读笔记（预置示例）\n\n参考：Attention Is All You Need\nhttps://arxiv.org/abs/1706.03762\n\n研究问题：使用注意力机制构建序列转换模型。\n后续阅读：模型结构、训练设置与评测协议。\n\n当前内容不是本次在线检索或模型生成结果。',
+          '# Transformer 阅读笔记\n\n参考：Attention Is All You Need\nhttps://arxiv.org/abs/1706.03762\n\n研究问题：使用注意力机制构建序列转换模型。\n后续阅读：模型结构、训练设置与评测协议。',
       },
     ],
     boundary:
@@ -81,6 +82,7 @@ export const scenarios = [
     ],
     files: [
       { name: 'train.py', content: train },
+      { name: 'analysis.md', content: analysis },
       {
         name: 'review.md',
         content:
@@ -103,7 +105,7 @@ export const scenarios = [
       {
         name: 'analysis.md',
         content:
-          '# 实验分析（预置展示）\n\n11 个观测点，loss 从 4.0 降至 0.04611686。\n该实验验证最小生成、运行、指标读取链路。\n不代表真实数据集性能或论文复现成功。\n\n建议比较学习率 0.05；仅起草任务，未运行。',
+          '# Run 1 实验分析\n\n11 个观测点，loss 从 4.0 降至 0.04611686。\n该实验验证最小生成、运行、指标读取链路。\n不代表真实数据集性能或论文复现成功。\n\n建议比较学习率 0.05；仅起草任务，未运行。',
       },
     ],
     boundary: '查看实际指标、基础统计和 SVG 曲线，由 Agent 读取结果并草拟需要确认的后续任务。',

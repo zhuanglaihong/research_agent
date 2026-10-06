@@ -3,8 +3,11 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { scenarios } from '@/fixtures/research-demo'
 import { conversations } from '@/fixtures/demo-conversations'
 import report from '@/fixtures/feedback-report.json'
+import stdout from '@/fixtures/feedback-stdout.txt?raw'
 import RealExperimentCase from '@/components/RealExperimentCase.vue'
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import ResearchWorkflowCanvas from '@/components/ResearchWorkflowCanvas.vue'
+import ResearchTurnActivity from '@/components/ResearchTurnActivity.vue'
 const selected = ref(3)
 const scene = computed(() => scenarios[selected.value]!)
 const story = computed(() => conversations[selected.value]!)
@@ -39,7 +42,7 @@ const caseNames = [
 const labels: Record<string, string> = {
   ready: '选择案例开始',
   approval: '等待下一条演示',
-  running: '正在播放记录',
+  running: '正在展示回复',
   runApproval: '待演示运行审批',
   done: '案例回放完成',
 }
@@ -48,9 +51,25 @@ function stop() {
   playing.value = false
   automatic.value = false
 }
+function inspectActivity(target: string) {
+  const index = scene.value.files.findIndex((entry) => entry.name === target)
+  if (index >= 0) {
+    fileIndex.value = index
+    tab.value = 'files'
+  } else tab.value = target
+}
 async function scroll() {
   await nextTick()
-  transcript.value?.scrollTo({ top: transcript.value.scrollHeight, behavior: 'smooth' })
+  const container = transcript.value
+  const messages = container?.querySelectorAll<HTMLElement>('.story-turn')
+  const newest = messages?.[messages.length - 1]
+  if (container && newest) {
+    const top =
+      newest.getBoundingClientRect().top -
+      container.getBoundingClientRect().top +
+      container.scrollTop
+    container.scrollTo({ top: Math.max(0, top - 12), behavior: 'smooth' })
+  }
 }
 function playNext() {
   if (playing.value || !nextTurn.value) return
@@ -60,7 +79,8 @@ function playNext() {
     const turn = nextTurn.value!
     turns.value++
     tab.value = turn.tab
-    if (selected.value === 3 && turns.value === 4) fileIndex.value = 1
+    if (selected.value === 3 && turns.value === 4)
+      fileIndex.value = scene.value.files.findIndex((entry) => entry.name === 'review.md')
     playing.value = false
     scroll()
     if (automatic.value && nextTurn.value && turn.phase !== 'runApproval')
@@ -105,7 +125,7 @@ onUnmounted(stop)
         ><span class="brand-mark">r_</span
         ><span>research_agent<small>RESEARCH WORKSPACE</small></span></a
       >
-      <button class="new-task" @click="choose(selected)">↻ 重新播放当前案例</button>
+      <button class="new-task" @click="choose(selected)">↻ 重新开始当前案例</button>
       <div class="rail-label">工作空间</div>
       <div class="project-name"><span class="project-dot"></span>{{ scene.project }}</div>
       <div class="rail-label scenario-label">选择一个案例</div>
@@ -140,9 +160,7 @@ onUnmounted(stop)
           ><button class="quiet" @click="choose(selected)">重置</button>
         </div>
       </header>
-      <div class="demo-notice">
-        <span>ⓘ</span> 静态演示：预置对话与流程回放，不调用模型、不执行代码、不访问你的电脑。
-      </div>
+      <div class="demo-notice"><span>ⓘ</span> 会话回放：不调用实时模型，不在浏览器执行代码。</div>
       <div class="workspace-grid" :class="{ 'wide-workspace': wideWorkspace }">
         <section class="conversation" aria-label="科研对话">
           <div class="conversation-top">
@@ -157,7 +175,7 @@ onUnmounted(stop)
               <p>
                 {{
                   scene.verified
-                    ? '依据本机实测记录整理的固定对话 · 非逐字模型原文'
+                    ? '二次优化实验 · 脚本与指标来自本机运行记录'
                     : '方法与项目管理教学示例'
                 }}
               </p>
@@ -169,17 +187,19 @@ onUnmounted(stop)
               </div>
               <div class="assistant-message">
                 <div class="assistant-label">
-                  <span>r_</span> research_agent <small>固定会话回放</small>
+                  <span>r_</span> research_agent <small>科研助手</small>
                 </div>
-                <p>{{ turn.answer }}</p>
-                <details class="execution-summary">
-                  <summary>执行说明与核对依据</summary>
-                  <p>{{ turn.reasoning }}</p>
-                </details>
+                <ResearchTurnActivity
+                  :scenario="selected"
+                  :turn-index="i"
+                  :summary="turn.reasoning"
+                  @inspect="inspectActivity"
+                />
+                <MarkdownRenderer class="answer-markdown" :content="turn.answer" />
                 <button class="inspect-turn" @click="tab = turn.tab">{{ turn.action }} ↗</button>
               </div>
             </article>
-            <div v-if="playing" class="replay-loading"><span></span>正在播放预置消息…</div>
+            <div v-if="playing" class="replay-loading"><span></span>正在展示回复…</div>
             <div v-if="phase === 'done'" class="story-complete">
               ✓ 案例已展示完毕。可继续查看右侧产物，或从左侧选择另一个案例。
             </div>
@@ -193,12 +213,12 @@ onUnmounted(stop)
                 :disabled="playing && !automatic"
                 @click="autoplay"
               >
-                {{ automatic ? '暂停自动播放' : '自动播放' }}</button
-              ><button class="quiet" @click="choose(selected)">重新播放</button>
+                {{ automatic ? '暂停演示' : '自动演示' }}</button
+              ><button class="quiet" @click="choose(selected)">重新开始</button>
             </div>
             <div class="composer replay-composer">
               <div class="next-label">
-                {{ nextTurn ? '下一条消息 · 固定案例' : '案例回放已完成' }}
+                {{ nextTurn ? '下一步' : '案例回放已完成' }}
               </div>
               <p>
                 {{
@@ -209,13 +229,11 @@ onUnmounted(stop)
               <div>
                 <span>无需密钥 · 不执行新实验</span
                 ><button class="send-button" :disabled="playing || !nextTurn" @click="playNext">
-                  {{ playing ? '播放中…' : nextTurn ? nextTurn.action + ' →' : '已完成 ✓' }}
+                  {{ playing ? '展示中…' : nextTurn ? nextTurn.action + ' →' : '已完成 ✓' }}
                 </button>
               </div>
             </div>
-            <small class="composer-footnote"
-              >固定会话回放 · 实验数据来自本机记录 · 真实任务在本地工作台执行。</small
-            >
+            <small class="composer-footnote">选择左侧案例，按步骤查看代码、流程与实验结果。</small>
           </div>
         </section>
         <aside class="inspector" aria-label="任务可视化管理">
@@ -272,11 +290,7 @@ onUnmounted(stop)
               ><div class="eyebrow">ARTIFACTS</div>
               <h2>可审阅的产物</h2>
               <p class="muted">
-                {{
-                  scene.verified
-                    ? '真实脚本与审阅记录；分析页为预置说明。'
-                    : '预置说明文件，不是在线生成代码。'
-                }}
+                {{ scene.verified ? '实验脚本、分析文档与审阅记录。' : '方法规格与项目检查文档。' }}
               </p>
               <div class="file-list">
                 <button
@@ -300,19 +314,9 @@ onUnmounted(stop)
                 ><div class="run-summary">
                   <span class="success">SUCCEEDED</span><span>Run 1 · exit 0</span>
                 </div>
-                <pre class="terminal">
-[真实运行摘要，非完整 stdout]
-provider: Ollama / qwen3:8b
-runner: Java ProcessBuilder
-script: train.py
-metric points: 11
-initial loss: 4.0
-final loss: 0.04611686018427385
-exit code: 0
-
-后续建议：用户审阅后安排新实验</pre
-                >
-                <p class="muted">本页面没有活跃进程。完整验收记录随仓库发布。</p></template
+                <pre class="terminal">python train.py
+{{ stdout }}</pre>
+                <p class="muted">Ollama / qwen3:8b · Java ProcessBuilder · 11 个指标观测点</p></template
               >
               <div v-else class="empty-state">
                 这个案例展示运行前的项目检查。选择左侧 Ollama 案例，可查看实际运行摘要与指标。
@@ -364,9 +368,7 @@ exit code: 0
               ><div class="eyebrow">PROJECT GUIDE</div>
               <h2>使用与案例说明</h2>
               <p>{{ scene.boundary }}</p>
-              <div class="note-box">
-                对话内容与工具步骤为前端预置。实测数值来自本机记录；固定消息按钮不会调用在线模型。
-              </div>
+              <div class="note-box">阅读方法文档、审阅代码、确认运行，再结合原始指标核对结论。</div>
               <a
                 v-if="selected < 2"
                 class="paper-link"
@@ -423,6 +425,80 @@ LLM_API_KEY=仅保存在本地</pre
     </div>
   </div>
 </template>
+
+<style scoped>
+.answer-markdown {
+  font-size: 14px;
+  line-height: 1.95;
+  color: #526783;
+  margin: 18px 0;
+}
+.answer-markdown :deep(h2) {
+  font-size: 19px;
+  line-height: 1.6;
+  font-weight: 650;
+  color: #273f67;
+  margin: 22px 0 12px;
+}
+.answer-markdown :deep(h3) {
+  font-size: 15px;
+  color: #38547e;
+  margin: 22px 0 10px;
+  font-weight: 600;
+}
+.answer-markdown :deep(p) {
+  margin: 12px 0;
+  line-height: 1.95;
+}
+.answer-markdown :deep(ul),
+.answer-markdown :deep(ol) {
+  padding-left: 23px;
+  margin: 14px 0;
+}
+.answer-markdown :deep(li) {
+  padding-left: 3px;
+  margin: 8px 0;
+}
+.answer-markdown :deep(strong) {
+  color: #344e78;
+  font-weight: 600;
+}
+.answer-markdown :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 12px;
+}
+.answer-markdown :deep(th),
+.answer-markdown :deep(td) {
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #e0e8f4;
+  vertical-align: top;
+}
+.answer-markdown :deep(th) {
+  background: #eff4fc;
+  font-weight: 600;
+  color: #5b759e;
+}
+.answer-markdown :deep(blockquote) {
+  border-left: 3px solid #7e9cec;
+  background: #f1f5fd;
+  padding: 3px 14px;
+  margin: 16px 0;
+  color: #617fae;
+}
+.answer-markdown :deep(a) {
+  color: #5279dd;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.answer-markdown :deep(pre) {
+  font-size: 12px;
+  line-height: 1.8;
+  border: 1px solid #e1e9f5;
+}
+</style>
 
 <style scoped>
 .research-shell {

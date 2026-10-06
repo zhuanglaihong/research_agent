@@ -313,7 +313,7 @@ Docker 中的工作区位于容器数据卷内，不能自动读取宿主机任�
 
 **在线演示：[打开 research_agent Demo](https://zhuanglaihong.github.io/research_agent/)。** GitHub Pages 已部署；2026-10-06 验证页面可访问及固定交互流程。
 
-在 /#/demo 选择科研案例，逐条播放固定会话或自动播放；右侧联动代码、运行记录、指标和可拖动流程画布。二次优化和 Digits 使用实测记录，方法规划使用教学示例。会话回放不连接模型、不执行新实验；真实任务请启动本地工作台。
+在 /#/demo 选择科研案例，逐条推进对话或自动演示；右侧联动代码、运行记录、指标和可拖动流程画布。回复支持 Markdown 方法说明、参数表和代码建议，并提供可折叠的思考与执行分析摘要。Ollama 案例可展开实际工具事件、生成脚本与终端输出，点击记录跳转到对应文件或指标。二次优化和 Digits 使用实测记录，方法规划使用教学示例。会话回放不连接模型、不执行新实验；真实任务请启动本地工作台。
 
 推送到 GitHub 且核对源码授权后，仓库所有者在 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。然后在 **Actions** 打开 `Publish static research_agent demo`，点击 **Run workflow → main → Run workflow**。等待 build/deploy 两个 job 成功，再打开上面的预期地址，确认“创建示例任务→确认→查看固定指标”按钮可用。工作流以 `/${repo-name}/` 为资源前缀构建 `frontend/dist`；前端或 Pages 工作流变更推送 main 后会自动重新部署，也可手动运行。依据：[GitHub Pages 自定义工作流说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
 
