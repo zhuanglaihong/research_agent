@@ -22,6 +22,9 @@ research:
   runner:
     enabled: ${RESEARCH_RUNNER_ENABLED:false}
     python-executable: ${RESEARCH_PYTHON_EXECUTABLE:python}
+    max-runtime-minutes: ${RESEARCH_RUN_MAX_MINUTES:5}
+  repository:
+    git-executable: ${RESEARCH_GIT_EXECUTABLE:git}
   ai:
     mode: ${RESEARCH_AI_MODE:demo}
     provider: ${LLM_PROVIDER:openai-compatible}

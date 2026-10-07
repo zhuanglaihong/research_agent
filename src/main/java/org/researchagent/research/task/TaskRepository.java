@@ -15,7 +15,7 @@ public class TaskRepository {
     private final RowMapper<TaskView> mapper = (r, n) -> new TaskView(r.getLong("id"), r.getLong("project_id"),
             r.getString("title"), r.getString("request_text"), r.getString("status"), r.getString("plan_json"),
             r.getString("result_text"), r.getString("output_path"), r.getString("provider"), r.getString("error_message"),
-            r.getTimestamp("created_at").toLocalDateTime(), r.getTimestamp("updated_at").toLocalDateTime());
+            r.getTimestamp("created_at").toLocalDateTime(), r.getTimestamp("updated_at").toLocalDateTime(),r.getLong("conversation_id"));
 
     public TaskRepository(JdbcTemplate jdbc, ObjectMapper json) { this.jdbc = jdbc; this.json = json; }
 
@@ -25,19 +25,25 @@ public class TaskRepository {
     }
 
     public long create(long project, long user, String prompt, String provider) {
+        return create(project,user,prompt,provider,null);
+    }
+
+    public long create(long project, long user, String prompt, String provider, Long conversationId) {
         var keys = new GeneratedKeyHolder();
         String plan = json(Map.of("steps", List.of("读取项目文件与需求", "通过文件工具生成科研代码", "整理使用说明与代码产物"),
                 "scope", "仅生成独立任务目录中的代码，不执行程序，不覆盖原仓库"));
         jdbc.update(c -> {
-            var statement = c.prepareStatement("insert into research_task(project_id,user_id,title,request_text,status,plan_json,provider) values(?,?,?,?,?,?,?)", new String[]{"id"});
+            var statement = c.prepareStatement("insert into research_task(project_id,user_id,title,request_text,status,plan_json,provider,conversation_id) values(?,?,?,?,?,?,?,?)", new String[]{"id"});
             statement.setLong(1, project); statement.setLong(2, user);
             statement.setString(3, prompt.substring(0, Math.min(80, prompt.length())));
             statement.setString(4, prompt); statement.setString(5, "WAITING_APPROVAL");
             statement.setString(6, plan); statement.setString(7, provider);
+            if(conversationId==null) statement.setNull(8,java.sql.Types.BIGINT); else statement.setLong(8,conversationId);
             return statement;
         }, keys);
         if (keys.getKey() == null) throw new BusinessException(ErrorCode.OPERATION_ERROR);
         long id = keys.getKey().longValue();
+        if(conversationId==null) jdbc.update("update research_task set conversation_id=? where id=?",id,id);
         event(id, "STATE", Map.of("status", "WAITING_APPROVAL", "message", "任务计划已就绪，请确认开始"));
         return id;
     }
@@ -65,6 +71,11 @@ public class TaskRepository {
     }
 
     public List<TaskView> queued() { return jdbc.query("select * from research_task where status='QUEUED' order by id limit 2", mapper); }
+
+    public boolean conversationBusy(long conversationId) {
+        Integer count=jdbc.queryForObject("select count(*) from research_task where conversation_id=? and status in ('WAITING_APPROVAL','QUEUED','RUNNING')",Integer.class,conversationId);
+        return count!=null&&count>0;
+    }
 
     public void event(long id, String type, Object payload) {
         jdbc.update("insert into task_event(task_id,event_type,payload) values(?,?,?)", id, type, json(payload));

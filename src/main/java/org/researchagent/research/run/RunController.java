@@ -26,7 +26,7 @@ public class RunController {
     @GetMapping("/research/runs/capabilities")
     public BaseResponse<Map<String, Object>> capabilities() {
         return ResultUtils.success(Map.of("enabled", runs.enabled(), "language", "python", "pythonExecutable", runs.pythonExecutable(), "approvalRequired", true,
-                "maxRuntimeSeconds", 300, "maxLogBytes", 1_048_576));
+                "maxRuntimeSeconds", runs.maxRuntimeSeconds(), "maxLogBytes", 1_048_576));
     }
     @PostMapping("/tasks/{taskId}/runs")
     public BaseResponse<RunView> create(@PathVariable long taskId, @RequestBody CreateRun request) throws IOException {

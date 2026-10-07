@@ -1,13 +1,13 @@
 <template>
   <a-card title="本地实验运行" :bordered="false" class="run-card">
-    <a-alert type="warning" show-icon message="仅在本机启用：运行生成代码前请先检查脚本。当前只有 Python，进程有 5 分钟与 1 MB 日志限制，但没有容器或操作系统沙箱。" />
+    <a-alert type="warning" show-icon message="仅在本机启用：运行生成代码前请先检查脚本。当前只有 Python，时限可配置（默认 5 分钟，最长 24 小时），日志最多 1 MB；没有容器或操作系统沙箱。" />
     <p v-if="!capabilities?.enabled" class="help">此功能默认关闭。在本地 .env 设置 RESEARCH_RUNNER_ENABLED=true 并重启后端后可使用。</p>
     <template v-else>
       <div class="controls">
         <a-select v-model:value="script" placeholder="选择生成的 Python 脚本" :options="scriptOptions" style="min-width:240px" />
         <a-button type="primary" :disabled="!script" :loading="busy" @click="prepareRun">准备实验运行</a-button>
       </div>
-      <p class="help">这里只运行选中的任务产物；执行命令由后端固定为 Python + 脚本路径，不经过 shell。</p>
+      <p class="help">这里只运行选中的任务产物；执行命令由后端固定为 Python + 脚本路径，不经过 shell。当前配置时限 {{ Math.floor((capabilities?.maxRuntimeSeconds || 300) / 60) }} 分钟；后端需持续运行。</p>
       <a-empty v-if="!runs.length" description="尚无实验运行记录" />
       <div v-for="run in runs" :key="run.id" class="run-item">
         <div class="run-heading"><strong>#{{ run.id }} · {{ run.scriptPath }}</strong><a-tag :color="color(run.status)">{{ label(run.status) }}</a-tag></div>

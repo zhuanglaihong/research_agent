@@ -87,11 +87,15 @@ public class PaperToCodeService {
         Method method = get(projectId, methodId);
         String extra = instructions == null ? "" : instructions.strip();
         if (extra.length() > 4000) throw new BusinessException(ErrorCode.PARAMS_ERROR, "补充要求不能超过 4000 字符");
+        List<String> repositories = jdbc.query("select repository_name,local_path,commit_hash from imported_repository where project_id=? order by imported_at desc limit 10",
+                (r,n) -> r.getString("repository_name") + " at " + r.getString("local_path") + " (commit " + r.getString("commit_hash") + ")", projectId);
         String prompt = "依据项目知识库中的论文《" + method.title() + "》实现可复现的研究代码。\n"
                 + "来源：" + method.source() + "\n目标语言：" + project.defaultLanguage() + "\n"
                 + "请先核对方法、数据、损失函数、训练设置和评估指标；缺失信息用 TODO 标出，不得编造论文结论。"
                 + "输出实现代码、依赖说明、运行命令、最小验证方式和未解决问题。\n"
-                + "方法提纲（用户应先审阅）：\n" + method.methodBrief() + "\n补充要求：" + extra;
+                + "方法提纲（用户应先审阅）：\n" + method.methodBrief() + "\n"
+                + (repositories.isEmpty() ? "项目中未导入参考代码仓库。\n" : "参考仓库已下载到项目工作区，先调用 listProjectFiles/readProjectFile 检查 README、依赖、入口与实现，再决定复用点；不要覆盖仓库文件。\n" + String.join("\n", repositories) + "\n")
+                + "补充要求：" + extra;
         return tasks.create(projectId, LocalWorkspace.ID, prompt, provider);
     }
 

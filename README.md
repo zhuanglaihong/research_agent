@@ -122,6 +122,12 @@ LLM_MODEL=qwen3:8b
 
 **执行范围：** 当前 Runner 支持 Python，单次运行上限 5 分钟；代码生成可面向其他语言。Runner 不是安全沙箱，只运行可信脚本。后端默认仅监听本机，不直接暴露无认证的工作区接口。
 
+将 `RESEARCH_RUN_MAX_MINUTES` 设为 1–1440 可调整单次运行时限（默认 5 分钟）。长实验需让后端进程保持运行；服务重启会中断正在执行的实验。实验日志、退出状态和已完成指标会写入本地记录。
+
+### 导入已有仓库
+
+在项目的“每日论文”页签中输入公开 GitHub 仓库地址。仓库会以浅克隆方式保存到项目目录的 `repositories/` 下，并记录导入 commit。Agent 可读取其中的说明和代码，再把修改建议或新代码保存到独立任务产物；当前不会直接提交或改写原仓库。主机需安装 Git 并确保 `git` 在 PATH 中，可用 `RESEARCH_GIT_EXECUTABLE` 指定可执行文件。
+
 > 📖 系统安装、模型排障、每日论文、指标格式、MCP 与 Docker 使用，见 **[详细使用指南](docs/user-guide.md)**。
 
 ---
@@ -136,7 +142,7 @@ LLM_MODEL=qwen3:8b
 | 后端与数据 | Java 21 · Spring Boot 3.5.4 · JdbcTemplate · H2 · Flyway · 后台任务队列 |
 | Agent | LangChain4j · AiServices · Prompt · Tool Calling · Ollama / OpenAI 兼容模型 |
 | 知识与论文 | Markdown 文件记忆 · H2 分块与 BM25 检索 · PDFBox · arXiv · 定时同步 |
-| 执行与集成 | Java ProcessBuilder · 日志/指标解析 · SVG 曲线 · 只读 MCP · 可选 Docker Compose / Nginx |
+| 执行与集成 | Java ProcessBuilder · 可配置时限的实验运行 · GitHub 浅克隆与 commit 记录 · 日志/指标解析 · SVG 曲线 · 只读 MCP · 可选 Docker Compose / Nginx |
 
 ### 可核对的实验案例
 

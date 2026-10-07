@@ -22,7 +22,7 @@ import java.util.zip.*;
 
 @RestController
 public class TaskController {
-    public record CreateTask(String prompt) { }
+    public record CreateTask(String prompt, Long conversationId) { }
     private final TaskRepository tasks;
     private final TaskWorker worker;
     private final ResearchProjectService projects;
@@ -38,7 +38,15 @@ public class TaskController {
         long user=user(); projects.getOwnedProject(user,projectId);
         if(body==null || body.prompt()==null || body.prompt().isBlank() || body.prompt().length()>20000)
             throw new BusinessException(ErrorCode.PARAMS_ERROR,"请输入不超过 20000 字符的任务描述");
-        return ResultUtils.success(tasks.get(tasks.create(projectId,user,body.prompt().trim(),engine.mode())));
+        Long conversationId=body.conversationId();
+        if(conversationId!=null) {
+            TaskView anchor=tasks.owned(conversationId,user);
+            if(anchor.projectId()!=projectId || anchor.conversationId()!=conversationId)
+                throw new BusinessException(ErrorCode.PARAMS_ERROR,"会话不属于当前项目");
+            if(tasks.conversationBusy(conversationId))
+                throw new BusinessException(ErrorCode.OPERATION_ERROR,"请先完成或取消当前会话中的任务，再继续对话");
+        }
+        return ResultUtils.success(tasks.get(tasks.create(projectId,user,body.prompt().trim(),engine.mode(),conversationId)));
     }
     @GetMapping("/projects/{projectId}/tasks")
     public BaseResponse<List<TaskView>> list(@PathVariable long projectId,HttpServletRequest request) {

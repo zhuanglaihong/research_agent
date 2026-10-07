@@ -31,6 +31,13 @@
           </li></ul>
         </a-tab-pane>
         <a-tab-pane key="papers" :tab="`每日论文 (${papers.length})`">
+          <div class="paper-import repository-import">
+            <h3>导入已有 GitHub 项目</h3>
+            <p class="context-help">只支持公开 GitHub 仓库。代码会固定版本下载到当前项目的 repositories/ 目录；Agent 可以读取仓库文件并在独立任务产物中提出实现，不会直接覆盖原仓库。</p>
+            <div class="paper-settings"><a-input v-model:value="repositoryUrl" placeholder="https://github.com/owner/repository" /><a-button type="primary" :loading="importingRepository" @click="importRepository">导入仓库</a-button></div>
+            <ul v-if="repositories.length" class="paper-list"><li v-for="repository in repositories" :key="repository.id"><strong>{{ repository.repositoryName }}</strong><small>{{ repository.localPath }} · {{ repository.commitHash.slice(0, 12) }}</small><a :href="repository.repositoryUrl" target="_blank" rel="noopener noreferrer">查看 GitHub</a></li></ul>
+            <a-empty v-else description="尚未导入仓库" />
+          </div>
           <div class="paper-import">
             <h3>论文 PDF → 代码任务</h3>
             <p class="context-help">上传可复制文本的 PDF（≤10 MB、≤100 页），先审阅抽取的方法片段，再创建待确认的代码任务。扫描版 PDF 需先 OCR。</p>
@@ -67,16 +74,16 @@
         <h3>科研任务</h3>
         <a-empty v-if="tasks.length === 0" description="先下达第一个任务" />
         <button v-for="task in tasks" :key="task.id" class="task-item" :class="{ selected: selected?.id === task.id }" @click="selectTask(task)">
-          <strong>{{ task.title }}</strong><span>{{ statusLabel(task.status) }}</span>
+          <strong>{{ task.title }}</strong><span>{{ statusLabel(task.status) }} · 会话 #{{ task.conversationId }}</span>
         </button>
       </aside>
       <section class="task-main">
         <a-card title="下达科研任务" :bordered="false">
           <a-textarea v-model:value="prompt" :rows="4" :maxlength="20000" placeholder="例如：实现一份支持三个随机种子的训练脚本，记录 loss 和 accuracy，添加早停，并给出依赖及运行说明。也可以粘贴论文方法描述。" />
-          <div class="composer-actions"><span>生成代码前需要确认计划</span><a-button type="primary" :loading="submitting" @click="submitTask">创建任务</a-button></div>
+          <div class="composer-actions"><span>每轮单独审批 · 可开启新会话或续接所选会话</span><div class="composer-buttons"><a-button :loading="submitting" @click="submitTask()">开启新会话</a-button><a-button v-if="selected" type="primary" :disabled="conversationBusy" :loading="submitting" @click="submitTask(selected.conversationId)">继续当前会话</a-button></div></div>
         </a-card>
         <a-card v-if="selected" :title="selected.title" :bordered="false" class="task-panel">
-          <template #extra><a-tag :color="selected.status === 'SUCCEEDED' ? 'green' : 'blue'">{{ statusLabel(selected.status) }}</a-tag></template>
+          <template #extra><a-tag color="purple">会话 #{{ selected.conversationId }}</a-tag><a-tag :color="selected.status === 'SUCCEEDED' ? 'green' : 'blue'">{{ statusLabel(selected.status) }}</a-tag></template>
           <a-alert v-if="selected.provider === 'demo'" type="warning" show-icon message="固定样例演示模式：未调用大模型，不能视为论文复现或真实模型训练。" class="notice" />
           <a-alert v-if="selected.errorMessage" type="error" :message="selected.errorMessage" class="notice" />
           <a-steps :current="stageIndex" :status="stageStatus" size="small" class="stage-steps">
@@ -122,6 +129,7 @@ import { listTasks, createTask, getTask, approveTask, cancelTask, getTaskEvents,
 import { API_BASE_URL } from '@/config/env'
 import { getProjectMemory, saveProjectMemory, listKnowledge, addKnowledge, searchKnowledge, deleteKnowledge, type KnowledgeDocument, type KnowledgeHit } from '@/api/researchKnowledge'
 import { getPaperSubscription, savePaperSubscription, listPapers, syncPapers, listPaperMethods, uploadPaperMethod, createPaperMethodTask, type PaperItem, type PaperSubscription, type PaperMethod } from '@/api/researchPaper'
+import { listImportedRepositories, importGithubRepository, type ImportedRepository } from '@/api/researchRepositories'
 
 const route = useRoute()
 const projectId = String(route.params.id)
@@ -151,6 +159,9 @@ const paperEnabled = ref(false)
 const paperSubscription = ref<PaperSubscription>()
 const papers = ref<PaperItem[]>([])
 const paperMethods = ref<PaperMethod[]>([])
+const repositories = ref<ImportedRepository[]>([])
+const repositoryUrl = ref('')
+const importingRepository = ref(false)
 const pdfTitle = ref('')
 const pdfFile = ref<File>()
 const uploadingPdf = ref(false)
@@ -166,6 +177,7 @@ const stageIndex = computed(() => {
   return events.value.some(event => event.type === 'RETRIEVAL' || event.type === 'TOOL') ? 3 : 2
 })
 const stageStatus = computed(() => ['FAILED', 'CANCELED', 'INTERRUPTED'].includes(selected.value?.status || '') ? 'error' : 'process')
+const conversationBusy = computed(() => !!selected.value && tasks.value.some(task => task.conversationId === selected.value?.conversationId && ['WAITING_APPROVAL','QUEUED','RUNNING'].includes(task.status)))
 const planSteps = computed<string[]>(() => {
   try { return JSON.parse(selected.value?.planJson || '{}').steps || [] } catch { return [] }
 })
@@ -217,7 +229,7 @@ const subscribe = (id: string) => {
   source.addEventListener('business-error', () => { source.close(); connection.value = '进度订阅失败，请刷新页面' })
 }
 const loadContext = async () => {
-  const [saved, documents, subscription, paperList, methods] = await Promise.all([getProjectMemory(projectId), listKnowledge(projectId), getPaperSubscription(projectId), listPapers(projectId), listPaperMethods(projectId)])
+  const [saved, documents, subscription, paperList, methods, repositoryList] = await Promise.all([getProjectMemory(projectId), listKnowledge(projectId), getPaperSubscription(projectId), listPapers(projectId), listPaperMethods(projectId), listImportedRepositories(projectId)])
   if (saved.data.code !== 0 || documents.data.code !== 0 || subscription.data.code !== 0 || paperList.data.code !== 0) throw new Error('无法加载项目记忆、笔记或论文')
   memoryText.value = saved.data.data || ''
   knowledgeDocs.value = documents.data.data || []
@@ -226,6 +238,19 @@ const loadContext = async () => {
   paperEnabled.value = subscription.data.data?.enabled || false
   papers.value = paperList.data.data || []
   paperMethods.value = methods.data.data || []
+  repositories.value = repositoryList.data.data || []
+}
+const importRepository = async () => {
+  if (!repositoryUrl.value.trim()) { message.warning('请填写公开 GitHub 仓库地址'); return }
+  importingRepository.value = true
+  try {
+    const response = await importGithubRepository(projectId, repositoryUrl.value.trim())
+    if (response.data.code !== 0) throw new Error(response.data.message)
+    repositories.value = [response.data.data, ...repositories.value]
+    repositoryUrl.value = ''
+    message.success(`已导入 ${response.data.data.repositoryName}，版本 ${response.data.data.commitHash.slice(0, 12)}`)
+  } catch (error) { message.error(error instanceof Error ? error.message : '仓库导入失败') }
+  finally { importingRepository.value = false }
 }
 const selectPdf = (event: Event) => { pdfFile.value = (event.target as HTMLInputElement).files?.[0] }
 const importPdf = async () => {
@@ -339,11 +364,11 @@ const selectTask = async (task: ResearchTask) => {
     subscribe(task.id)
   } catch { message.error('加载任务详情失败') }
 }
-const submitTask = async () => {
+const submitTask = async (conversationId?: string) => {
   if (!prompt.value.trim()) { message.warning('请描述科研任务'); return }
   submitting.value = true
   try {
-    const response = await createTask(projectId, prompt.value.trim())
+    const response = await createTask(projectId, prompt.value.trim(), conversationId)
     if (response.data.code !== 0) throw new Error(response.data.message)
     tasks.value.unshift(response.data.data)
     prompt.value = ''
@@ -425,6 +450,7 @@ onUnmounted(() => stream?.close())
 .selected { border-color:#1677ff!important; background:#f0f7ff!important; }
 .task-panel { margin-top:20px; }
 .composer-actions, .task-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; }
+.composer-buttons { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
 .composer-actions span { color:#667085; font-size:13px; }
 .plan-box { border:1px solid #d6e4ff; background:#f5f8ff; padding:16px; border-radius:8px; }
 .notice { margin-bottom:16px; }

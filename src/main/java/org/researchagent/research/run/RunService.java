@@ -32,13 +32,13 @@ import java.util.concurrent.Semaphore;
 @Service
 public class RunService {
     private static final long MAX_LOG_BYTES = 1_048_576;
-    private static final Duration MAX_RUNTIME = Duration.ofMinutes(5);
     private final JdbcTemplate jdbc;
     private final TaskRepository tasks;
     private final ResearchProjectService projects;
     private final WorkspaceService workspaces;
     private final boolean enabled;
     private final String python;
+    private final Duration maxRuntime;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Semaphore slot = new Semaphore(1);
     private final Map<Long, Process> processes = new ConcurrentHashMap<>();
@@ -50,9 +50,11 @@ public class RunService {
     public RunService(JdbcTemplate jdbc, TaskRepository tasks, ResearchProjectService projects,
             WorkspaceService workspaces,
             @Value("${research.runner.enabled:false}") boolean enabled,
-            @Value("${research.runner.python-executable:python}") String python) {
+            @Value("${research.runner.python-executable:python}") String python,
+            @Value("${research.runner.max-runtime-minutes:5}") long maxRuntimeMinutes) {
+        if (maxRuntimeMinutes < 1 || maxRuntimeMinutes > 1440) throw new IllegalArgumentException("research.runner.max-runtime-minutes must be between 1 and 1440");
         this.jdbc = jdbc; this.tasks = tasks; this.projects = projects; this.workspaces = workspaces;
-        this.enabled = enabled; this.python = python;
+        this.enabled = enabled; this.python = python; this.maxRuntime = Duration.ofMinutes(maxRuntimeMinutes);
     }
 
     private static java.time.LocalDateTime timestamp(Timestamp value) {
@@ -61,6 +63,7 @@ public class RunService {
 
     public boolean enabled() { return enabled; }
     public String pythonExecutable() { return python; }
+    public long maxRuntimeSeconds() { return maxRuntime.toSeconds(); }
 
     private Path output(long taskId) throws IOException {
         var task = tasks.owned(taskId, 1);
@@ -182,7 +185,7 @@ public class RunService {
             process = builder.start();
             processes.put(run.id(), process);
             process.getOutputStream().close();
-            Instant deadline = Instant.now().plus(MAX_RUNTIME);
+            Instant deadline = Instant.now().plus(maxRuntime);
             while (process.isAlive()) {
                 if (!"RUNNING".equals(get(run.id()).status()) || Instant.now().isAfter(deadline)
                         || Files.size(stdout) + Files.size(stderr) > MAX_LOG_BYTES) {
